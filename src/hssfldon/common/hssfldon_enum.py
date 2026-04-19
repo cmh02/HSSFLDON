@@ -15,14 +15,17 @@ class HSSFLDON_ServerState(Enum):
     # General state for server is idle and waiting on some trigger
     IDLE = 0
 
+    # State for when server is waiting on clients to register
+    WAITING_CLIENT_REGISTRATION = 1
+
     # State for when server is aggregating client updates and updating global model
-    AGGREGATING = 1
+    AGGREGATING = 9
 
     # State for when server is in passive learning mode
-    PASSIVE_LEARNING = 2
+    PASSIVE_LEARNING = 10
 
     # State for when server is in active learning mode
-    ACTIVE_LEARNING = 3
+    ACTIVE_LEARNING = 11
 
 class HSSFLDON_ClientState(Enum):
     """
