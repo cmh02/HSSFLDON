@@ -75,5 +75,8 @@ def main() -> None:
 				except subprocess.TimeoutExpired:
 					process.kill()
 
+	# Final log message before simulator exits
+	simulator_logger.info("HSSFLDON Simulator complete!")
+
 if __name__ == "__main__":
 	main()
