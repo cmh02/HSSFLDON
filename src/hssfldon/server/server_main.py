@@ -12,5 +12,8 @@
 
 '''
 
+# Project Imports
+from hssfldon.server.server_app import HSSFLDON_ServerApplication
+
 if __name__ == "__main__":
-	pass
+	server = HSSFLDON_ServerApplication()
