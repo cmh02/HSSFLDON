@@ -12,6 +12,7 @@
 
 # Library Imports
 import os
+from dotenv import load_dotenv
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
@@ -23,8 +24,14 @@ class HSSFLDON_ClientApplication:
 	"""
 	def __init__(self):
 
+		# Load env file
+		load_dotenv(dotenv_path='../.env')
+
+		# Get client ID from env
+		self.client_id: str = os.getenv("HSSFLDON_CLIENT_ID", f"{os.getpid()}")
+
 		# Get logger
-		self.logger = HSSFLDON_Logger(name=f"Client {os.getpid()}")
+		self.logger = HSSFLDON_Logger(name=f"Client {self.client_id}")
 		self.logger.info(f"Initialized HSSFLDON Client Application with PID: {os.getpid()}!")
 
 		pass

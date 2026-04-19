@@ -20,7 +20,7 @@ from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
 def main() -> None:
 
 	# Make logger for simulator
-	simulator_logger = HSSFLDON_Logger(name=f"Simulator {os.getpid()}")
+	simulator_logger = HSSFLDON_Logger(name=f"Simulator")
 	simulator_logger.info(f"Initialized HSSFLDON Simulator with PID: {os.getpid()}!")
 	
 	# List for tracking all processes created by simulator
