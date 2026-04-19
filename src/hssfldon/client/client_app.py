@@ -24,7 +24,7 @@ class HSSFLDON_ClientApplication:
 	def __init__(self):
 
 		# Get logger
-		self.logger = HSSFLDON_Logger(name=f"Client_{os.getpid()}")
+		self.logger = HSSFLDON_Logger(name=f"Client {os.getpid()}")
 		self.logger.info(f"Initialized HSSFLDON Client Application with PID: {os.getpid()}!")
 
 		pass
