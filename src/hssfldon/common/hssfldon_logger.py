@@ -44,6 +44,15 @@ class HSSFLDON_Logger:
 		self.logger.setLevel(level)
 		self.logger.log(logging.INFO, f"Initialized HSSFLDON Logger with name: {name} and level: {logging.getLevelName(level)}!")
 
+	def getLogger(self) -> logging.Logger:
+		"""
+		Get the configured logger for HSSFLDON.
+
+		Returns:
+			logging.Logger: The configured logger.
+		"""
+		return self.logger
+
 
 	def _setup_getConsoleHandler(self) -> logging.Handler:
 		"""
