@@ -14,13 +14,19 @@ import time
 import signal
 import subprocess
 
+# Project Imports
+from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
+
 def main() -> None:
+
+	# Make logger for simulator
+	simulator_logger = HSSFLDON_Logger(name=f"Simulator_{os.getpid()}")
+	simulator_logger.info(f"Initialized HSSFLDON Simulator with PID: {os.getpid()}!")
 	
 	# List for tracking all processes created by simulator
 	serverProcess: subprocess.Popen[bytes] | None = None
 	clientProcesses: list[subprocess.Popen[bytes]] = []
 	
-
 	try:
 		# Start server entrypoint
 		server: subprocess.Popen[bytes] = subprocess.Popen(
@@ -33,7 +39,7 @@ def main() -> None:
 		time.sleep(2)
 
 		# Start clients
-		client_count: int = 1
+		client_count: int = 3
 		for i in range(client_count):
 			env: dict[str, str] = os.environ.copy()
 			env["HSSFLDON_CLIENT_ID"] = str(i)
