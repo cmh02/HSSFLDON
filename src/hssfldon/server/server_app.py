@@ -23,6 +23,7 @@ class HSSFLDON_ServerApplication:
 	def __init__(self):
 
 		# Get logger
+		self.logger = HSSFLDON_Logger(name="HSSFLDON_ServerApplication").getLogger()
 
 		pass
 

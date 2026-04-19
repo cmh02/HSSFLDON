@@ -52,7 +52,52 @@ class HSSFLDON_Logger:
 			logging.Logger: The configured logger.
 		"""
 		return self.logger
+	
+	def log(self, level: int, message: str):
+		"""
+		Log a message with the specified level.
 
+		Args:
+			level (int): The logging level (e.g., logging.DEBUG, logging.INFO).
+			message (str): The message to log.
+		"""
+		self.logger.log(level, message)
+
+	def debug(self, message: str):
+		"""
+		Log a debug message.
+
+		Args:
+			message (str): The message to log.
+		"""
+		self.logger.debug(message)
+
+	def info(self, message: str):
+		"""
+		Log an info message.
+
+		Args:
+			message (str): The message to log.
+		"""
+		self.logger.info(message)
+
+	def warning(self, message: str):
+		"""
+		Log a warning message.
+
+		Args:
+			message (str): The message to log.
+		"""
+		self.logger.warning(message)
+
+	def error(self, message: str):
+		"""
+		Log an error message.
+
+		Args:
+			message (str): The message to log.
+		"""
+		self.logger.error(message)
 
 	def _setup_getConsoleHandler(self) -> logging.Handler:
 		"""
