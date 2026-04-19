@@ -9,3 +9,9 @@
 	- Receiving active labeling requests
 	- Uploading model updates to server
 '''
+
+# Project Imports
+from hssfldon.client.client_app import HSSFLDON_ClientApplication
+
+if __name__ == "__main__":
+	client_app = HSSFLDON_ClientApplication()
