@@ -12,12 +12,18 @@
 
 '''
 
+# Project Imports
+from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
+
 
 class HSSFLDON_ServerApplication:
 	"""
 	The main server application for HSSFLDON.
 	"""
 	def __init__(self):
+
+		# Get logger
+
 		pass
 
 	
