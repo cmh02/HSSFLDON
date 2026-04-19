@@ -42,7 +42,7 @@ class HSSFLDON_Logger:
 
 		# Finalize logger setup
 		self.logger.setLevel(level)
-		self.logger.log(logging.INFO, f"Initialized HSSFLDON Logger with name: {name} and level: {logging.getLevelName(level)}!")
+		self.logger.info(f"Initialized HSSFLDON Logger with name: {name} and level: {logging.getLevelName(level)}!")
 
 	def getLogger(self) -> logging.Logger:
 		"""

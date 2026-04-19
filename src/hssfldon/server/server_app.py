@@ -12,6 +12,9 @@
 
 '''
 
+# Library Imports
+import os
+
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
 
@@ -23,7 +26,8 @@ class HSSFLDON_ServerApplication:
 	def __init__(self):
 
 		# Get logger
-		self.logger = HSSFLDON_Logger(name="HSSFLDON_ServerApplication").getLogger()
+		self.logger = HSSFLDON_Logger(name=f"Server_{os.getpid()}")
+		self.logger.info(f"Initialized HSSFLDON Server Application with PID: {os.getpid()}!")
 
 		pass
 
