@@ -9,10 +9,10 @@
 
 # Library Imports
 import os
-import signal
-import subprocess
 import sys
 import time
+import signal
+import subprocess
 
 def main() -> None:
 	
