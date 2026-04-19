@@ -28,7 +28,7 @@ class HSSFLDON_ClientApplication:
 		load_dotenv(dotenv_path='../.env')
 
 		# Get client ID from env
-		self.client_id: str = os.getenv("HSSFLDON_CLIENT_ID", f"{os.getpid()}")
+		self.client_id: int = int(os.getenv("HSSFLDON_CLIENT_ID", f"{os.getpid()}"))
 
 		# Get logger
 		self.logger = HSSFLDON_Logger(name=f"Client {self.client_id}")
