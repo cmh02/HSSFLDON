@@ -26,7 +26,10 @@ class HSSFLDON_Logger:
 
 		# Setup logger and formatter
 		self.logger: logging.Logger = logging.getLogger(name)
-		self.formatter: logging.Formatter = logging.Formatter(f'%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+		self.formatter: logging.Formatter = logging.Formatter(
+			fmt=f'[%(asctime)s][%(name)s][%(levelname)s] %(message)s',
+			datefmt='%m-%d %H:%M:%S'
+		)
 
 		# Setup console handler
 		console_handler = self._setup_getConsoleHandler()
