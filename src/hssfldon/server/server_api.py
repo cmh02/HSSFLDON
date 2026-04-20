@@ -15,6 +15,9 @@ from typing import Optional
 from fastapi import APIRouter, Request, status
 from pydantic import BaseModel, Field
 
+# Project Imports
+from hssfldon.server.server_app import HSSFLDON_ServerApplication
+
 # Create router instance
 HSSFLDON_ServerAPIRouter = APIRouter()
 
@@ -49,10 +52,42 @@ async def register_client(request: Request, payload: RegisterClientRequest):
     Description: Register a new client with the server.
     """
     # Access the server application instance
-    server_app = request.app.state.server_app
+    server_app: HSSFLDON_ServerApplication = request.app.state.server_app
 
     # Await the registration
     await anyio.to_thread.run_sync(server_app.registerClient, payload.client_id)
 
     # Return success
     return RegisterClientResponse(status="ok", message=f"Client {payload.client_id} registered successfully!", client_id=payload.client_id)
+
+class GetTaskRequest(BaseModel):
+    """
+    Request model for fetching the next task for a client.
+    """
+    client_id: int = Field(..., gte=0, description="Unique identifier for the client")
+
+class GetTaskResponse(BaseModel):
+    """
+    Response model for fetching the next task for a client.
+    """
+    status: str = Field(..., description="Status of the request")
+    message: str = Field(..., description="Additional information about the request result")
+    task: Optional[str] = Field(None, description="The next task assigned to the client, if available")
+
+@HSSFLDON_ServerAPIRouter.post("/task", response_model=GetTaskResponse, status_code=status.HTTP_200_OK, tags=["Client Management"])
+async def getClientTask(request: Request, payload: GetTaskRequest):
+    """
+    API Endpoint: /task
+    Method: POST
+    Description: Fetch the next task for a client.
+    """
+    # Access the server application instance
+    server_app: HSSFLDON_ServerApplication = request.app.state.server_app
+
+    # Get task from mapping
+    task = server_app.clientTasks.get(payload.client_id, None)
+
+    if task is not None:
+        return GetTaskResponse(status="ok", message=f"Next task for client {payload.client_id} fetched successfully!", task=task.name)
+    else:
+        return GetTaskResponse(status="ok", message=f"No tasks available for client {payload.client_id} at this time.", task=None)

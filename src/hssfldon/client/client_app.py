@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
+from hssfldon.common.hssfldon_enum import HSSFLDON_ClientState, HSSFLDON_ClientTask
 
 
 class HSSFLDON_ClientApplication:
@@ -80,7 +81,7 @@ class HSSFLDON_ClientApplication:
 		"""
 		Register the client with the server.
 		"""
-		self.logger.info(f"Making request to register with server!")
+		self.logger.debug(f"Making request to register with server!")
 
 		# Check server health before attempting to register
 		if not self.checkServerHealth():
@@ -102,3 +103,19 @@ class HSSFLDON_ClientApplication:
 			self.logger.error(f"An exception occured when trying to register with server!")
 			self.logger.debug(f"-> Exception details: {e}")
 		return False
+	
+	def getNextTask(self) -> HSSFLDON_ClientTask:
+		"""
+		Retrieve the next task for the client from the server.
+		"""
+		self.logger.debug(f"Making request to fetch next task!")
+		try:
+			response: requests.Response = requests.get(f"{self.server_api_url}/task?client_id={self.client_id}")
+			response.raise_for_status()
+			data: dict = response.json()
+			task: HSSFLDON_ClientTask = HSSFLDON_ClientTask(data.get("task"))
+			self.logger.info(f"Received task from server: {task.name}")
+			return task
+		except Exception as e:
+			self.logger.error(f"An exception occurred while fetching next task: {e}")
+		return HSSFLDON_ClientTask.STANDBY
