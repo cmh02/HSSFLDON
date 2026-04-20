@@ -49,17 +49,10 @@ def main() -> None:
 			)
 			clientProcesses.append(client)
 
-		# Wait for all clients to exit
-		for process in clientProcesses:
-			try:
-				process.wait(timeout=30)
-			except subprocess.TimeoutExpired:
-				process.send_signal(sig=signal.SIGTERM)
-				try:
-					process.wait(timeout=5)
-				except subprocess.TimeoutExpired:
-					process.kill()
-					process.wait(timeout=5)
+		time.sleep(180)
+
+	except KeyboardInterrupt as e:
+		simulator_logger.info("Received KeyboardInterrupt, shutting down simulator!")
 			
 	finally:
 
