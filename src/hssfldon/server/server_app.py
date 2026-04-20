@@ -15,11 +15,18 @@
 # Library Imports
 import os
 import time
+import uvicorn
+import requests
+import threading
+from fastapi import FastAPI
 from dotenv import load_dotenv
+
+
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
 from hssfldon.common.hssfldon_enum import HSSFLDON_ServerState, HSSFLDON_ClientTask
+from hssfldon.server.server_api import HSSFLDON_ServerAPIRouter
 
 
 class HSSFLDON_ServerApplication:
@@ -39,7 +46,16 @@ class HSSFLDON_ServerApplication:
 		self.clients: list[int] = []
 		self.clientTasks: dict[int, HSSFLDON_ClientTask] = {}
 
-		# Startup API and idle until API online
+		# Setup API
+		self.api_host = os.getenv("HSSFLDON_SERVER_HOST", "127.0.0.1")
+		self.api_port = int(os.getenv("HSSFLDON_SERVER_PORT", 8000))
+		self.api_app = FastAPI(title="HSSFLDON Server API")
+		self.api_app.include_router(HSSFLDON_ServerAPIRouter)
+		self.api_config = uvicorn.Config(app=self.api_app, host=self.api_host, port=self.api_port, log_level="info")
+		self.api_server = uvicorn.Server(config=self.api_config)
+		self.api_thread = None
+
+		# Launch API and idle
 		self.launchApi()
 		self.enterState(HSSFLDON_ServerState.IDLE)
 
@@ -47,20 +63,37 @@ class HSSFLDON_ServerApplication:
 		self.enterState(HSSFLDON_ServerState.WAITING_CLIENT_REGISTRATION)
 		registrationWindow = int(os.getenv("HSSFLDON_CLIENT_REGISTRATION_WINDOW", 30))
 		self.logger.info(f"Waiting for client registration for {registrationWindow} seconds!")
+		time.sleep(registrationWindow)
 
+		# Close API and shutdown everything (for now)
+		self.closeApi()
 
-	def launchApi(self):
+	def launchApi(self) -> bool:
 		"""
 		Launch the server API to listen for client requests.
 		"""
-		self.logger.info(f"Launching Server API!")
+		if self.api_thread is not None and self.api_thread.is_alive():
+			self.logger.warning("Call was made to launch API but API server is already running!")
+			return False
 
-	def closeApi(self):
+		self.logger.info(f"Starting API server on `http://{self.api_host}:{self.api_port}`!")
+		self.api_thread = threading.Thread(target=self.api_server.run, daemon=True)
+		self.api_thread.start()
+		return True
+
+	def closeApi(self) -> bool:
 		"""
 		Close the server API and clean up resources.
 		"""
-		self.logger.info(f"Closing Server API!")
+		if self.api_thread is None or not self.api_thread.is_alive():
+			self.logger.warning("Call was made to close API but API server is not running!")
+			return False
 
+		self.logger.info(f"Stopping API server on `http://{self.api_host}:{self.api_port}`!")
+		self.api_server.should_exit = True
+		self.api_thread.join()
+		return True
+	
 	def enterState(self, state: HSSFLDON_ServerState):
 		"""
 		Enter a specific state and perform actions for that state.
