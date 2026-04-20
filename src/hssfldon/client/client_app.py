@@ -33,16 +33,16 @@ class HSSFLDON_ClientApplication:
 		self.client_id: int = int(os.getenv("HSSFLDON_CLIENT_ID", f"{os.getpid()}"))
 
 		# Get logger
-		self.logger = HSSFLDON_Logger(name=f"Client {self.client_id}")
+		self.logger: HSSFLDON_Logger = HSSFLDON_Logger(name=f"Client {self.client_id}")
 		self.logger.info(f"Initialized HSSFLDON Client Application with PID: {os.getpid()}!")
 
 		# Load server API details from env
-		self.server_host = os.getenv("HSSFLDON_SERVER_HOST", "127.0.0.1")
-		self.server_port = int(os.getenv("HSSFLDON_SERVER_PORT", 8000))
-		self.server_api_url = f"http://{self.server_host}:{self.server_port}"
+		self.server_host: str = os.getenv("HSSFLDON_SERVER_HOST", "127.0.0.1")
+		self.server_port: int = int(os.getenv("HSSFLDON_SERVER_PORT", 8000))
+		self.server_api_url: str = f"http://{self.server_host}:{self.server_port}"
 
 		# Register with server
-		self.register()
+		self.registered: bool = self.register()
 
 	def checkServerHealth(self) -> bool:
 		"""
@@ -50,16 +50,16 @@ class HSSFLDON_ClientApplication:
 		"""
 
 		# Get number of attempts and delay between attempts from env
-		attempts = int(os.getenv("HSSFLDON_SERVER_HEALTH_CHECK_ATTEMPTS", 5))
-		delay = int(os.getenv("HSSFLDON_SERVER_HEALTH_CHECK_DELAY", 5))
+		attempts: int = int(os.getenv("HSSFLDON_SERVER_HEALTH_CHECK_ATTEMPTS", 5))
+		delay: int = int(os.getenv("HSSFLDON_SERVER_HEALTH_CHECK_DELAY", 5))
 
 		# Try to check server health with retries
 		for attempt in range(1, attempts + 1):
 			self.logger.debug(f"Checking server health (Attempt {attempt}/{attempts})...")
 			try:
-				response = requests.get(f"{self.server_api_url}/health")
+				response: requests.Response = requests.get(f"{self.server_api_url}/health")
 				response.raise_for_status()
-				data = response.json()
+				data: dict = response.json()
 				if data.get("status") == "ok":
 					self.logger.debug(f"Server is online and responsive!")
 					return True
@@ -93,9 +93,9 @@ class HSSFLDON_ClientApplication:
 
 		# Make request to server
 		try:
-			response = requests.post(f"{self.server_api_url}/register", json=payload, headers=headers)
+			response: requests.Response = requests.post(f"{self.server_api_url}/register", json=payload, headers=headers)
 			response.raise_for_status()
-			data = response.json()
+			data: dict = response.json()
 			self.logger.info(f"Successfully registered with server!")
 			return True
 		except Exception as e:
