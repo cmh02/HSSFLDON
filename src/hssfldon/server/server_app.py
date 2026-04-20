@@ -51,6 +51,7 @@ class HSSFLDON_ServerApplication:
 		self.api_port = int(os.getenv("HSSFLDON_SERVER_PORT", 8000))
 		self.api_app = FastAPI(title="HSSFLDON Server API")
 		self.api_app.include_router(HSSFLDON_ServerAPIRouter)
+		self.api_app.state.server_app = self
 		self.api_config = uvicorn.Config(app=self.api_app, host=self.api_host, port=self.api_port, log_level="info")
 		self.api_server = uvicorn.Server(config=self.api_config)
 		self.api_thread = None

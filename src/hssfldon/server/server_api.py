@@ -10,7 +10,10 @@
 '''
 
 # Library Imports
-from fastapi import APIRouter
+import asyncio
+from typing import Optional
+from fastapi import APIRouter, Request, status
+from pydantic import BaseModel, Field
 
 # Create router instance
 HSSFLDON_ServerAPIRouter = APIRouter()
@@ -23,3 +26,33 @@ def health_check():
     Description: Health check endpoint to verify that the server is online and responsive.
     """
     return {"status": "ok", "message": "System is online!"}
+
+class RegisterClientRequest(BaseModel):
+    """
+    Request model for client registration.
+    """
+    client_id: int = Field(..., gt=0, description="Unique identifier for the client")
+
+class RegisterClientResponse(BaseModel):
+    """
+    Response model for client registration.
+    """
+    status: str = Field(..., description="Status of the registration request")
+    message: str = Field(..., description="Additional information about the registration result")
+    client_id: Optional[int] = Field(None, description="The ID of the registered client, if successful")
+
+@HSSFLDON_ServerAPIRouter.post("/register", response_model=RegisterClientResponse, status_code=status.HTTP_201_CREATED, tags=["Client Management"])
+async def register_client(request: Request, payload: RegisterClientRequest):
+    """
+    API Endpoint: /register
+    Method: POST
+    Description: Register a new client with the server.
+    """
+    # Access the server application instance
+    server_app = request.app.state.server_app
+
+    # Await the registration
+    await asyncio.to_thread.run_sync(server_app.register_client, payload.client_id)
+
+    # Return success
+    return RegisterClientResponse(status="ok", message=f"Client {payload.client_id} registered successfully!", client_id=payload.client_id)
