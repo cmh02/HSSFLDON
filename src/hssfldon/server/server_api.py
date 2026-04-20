@@ -10,7 +10,7 @@
 '''
 
 # Library Imports
-import asyncio
+import anyio
 from typing import Optional
 from fastapi import APIRouter, Request, status
 from pydantic import BaseModel, Field
@@ -52,7 +52,7 @@ async def register_client(request: Request, payload: RegisterClientRequest):
     server_app = request.app.state.server_app
 
     # Await the registration
-    await asyncio.to_thread.run_sync(server_app.register_client, payload.client_id)
+    await anyio.to_thread.run_sync(server_app.registerClient, payload.client_id)
 
     # Return success
     return RegisterClientResponse(status="ok", message=f"Client {payload.client_id} registered successfully!", client_id=payload.client_id)
