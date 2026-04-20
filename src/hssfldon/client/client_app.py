@@ -12,6 +12,7 @@
 
 # Library Imports
 import os
+import time
 import requests
 from dotenv import load_dotenv
 
@@ -43,11 +44,48 @@ class HSSFLDON_ClientApplication:
 		# Register with server
 		self.register()
 
-	def register(self):
+	def checkServerHealth(self) -> bool:
+		"""
+		Check the health of the server by making a request to the /health endpoint.
+		"""
+
+		# Get number of attempts and delay between attempts from env
+		attempts = int(os.getenv("HSSFLDON_SERVER_HEALTH_CHECK_ATTEMPTS", 5))
+		delay = int(os.getenv("HSSFLDON_SERVER_HEALTH_CHECK_DELAY", 5))
+
+		# Try to check server health with retries
+		for attempt in range(1, attempts + 1):
+			self.logger.debug(f"Checking server health (Attempt {attempt}/{attempts})...")
+			try:
+				response = requests.get(f"{self.server_api_url}/health")
+				response.raise_for_status()
+				data = response.json()
+				if data.get("status") == "ok":
+					self.logger.debug(f"Server is online and responsive!")
+					return True
+				else:
+					self.logger.warning(f"Server health check failed: {data.get('message')}")
+			except Exception as e:
+				self.logger.error(f"An exception occurred during server health check: {e}")
+
+			# Wait before next attempt
+			if attempt < attempts:
+				self.logger.info(f"Waiting for {delay} seconds before next health check attempt!")
+				time.sleep(delay)
+
+		self.logger.error(f"Server health check failed after {attempts} attempts. Server may be offline or unresponsive.")
+		return False
+
+	def register(self) -> bool:
 		"""
 		Register the client with the server.
 		"""
 		self.logger.info(f"Making request to register with server!")
+
+		# Check server health before attempting to register
+		if not self.checkServerHealth():
+			self.logger.error(f"Cannot register with server because server is offline or unresponsive!")
+			return False
 
 		# Build payload
 		payload = {"client_id": self.client_id}
@@ -59,8 +97,8 @@ class HSSFLDON_ClientApplication:
 			response.raise_for_status()
 			data = response.json()
 			self.logger.info(f"Successfully registered with server!")
-			return data
+			return True
 		except Exception as e:
 			self.logger.error(f"An exception occured when trying to register with server!")
 			self.logger.debug(f"-> Exception details: {e}")
-		return None
+		return False

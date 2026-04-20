@@ -31,7 +31,7 @@ class RegisterClientRequest(BaseModel):
     """
     Request model for client registration.
     """
-    client_id: int = Field(..., gt=0, description="Unique identifier for the client")
+    client_id: int = Field(..., gte=0, description="Unique identifier for the client")
 
 class RegisterClientResponse(BaseModel):
     """
