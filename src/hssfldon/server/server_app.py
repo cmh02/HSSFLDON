@@ -72,10 +72,12 @@ class HSSFLDON_ServerApplication:
 		self.enterState(HSSFLDON_ServerState.IDLE)
 
 		# Setup model
-		self.adaptersDirectory = os.getenv("HSSFLDON_MODEL_ADAPTERS_DIRECTORY", "model_adapters")
+		self.adaptersDirectory = os.getenv("HSSFLDON_MODEL_ADAPTERS_DIRECTORY", "adapters")
 		self.adaptersGlobalName = os.getenv("HSSFLDON_MODEL_ADAPTERS_GLOBAL", "global")
 		self.adaptersGlobalFullPath = os.path.join(self.adaptersDirectory, self.adaptersGlobalName)
 		self.modelName = os.getenv("HSSFLDON_HF_MODEL", "meta-llama/Llama-3.2-1B")
+		self.logger.debug(f"Global Adapter Path: {self.adaptersGlobalFullPath}")
+		self.logger.debug(f"Model Name: {self.modelName}")
 		self.initializeModel()
 
 		# # Close API and shutdown everything (for now)

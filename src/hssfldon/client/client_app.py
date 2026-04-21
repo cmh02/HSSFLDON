@@ -31,7 +31,7 @@ class HSSFLDON_ClientApplication:
 		envStatus: bool = load_dotenv()
 		if envStatus is False:
 			print(f"Warning: .env file not found or failed to load. Make sure to create a .env file with the necessary configuration variables!")
-
+ 
 		# Get client ID from env
 		self.client_id: int = int(os.getenv("HSSFLDON_CLIENT_ID", f"{os.getpid()}"))
 
