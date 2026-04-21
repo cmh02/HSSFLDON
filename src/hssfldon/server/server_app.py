@@ -73,6 +73,7 @@ class HSSFLDON_ServerApplication:
 		self.adaptersDirectory = os.getenv("HSSFLDON_MODEL_ADAPTERS_DIRECTORY", "model_adapters")
 		self.adaptersGlobalName = os.getenv("HSSFLDON_MODEL_ADAPTERS_GLOBAL", "global")
 		self.adaptersGlobalFullPath = os.path.join(self.adaptersDirectory, self.adaptersGlobalName)
+		self.modelName = os.getenv("HSSFLDON_HF_MODEL_MODEL", "meta-llama/Llama-3.2-1B")
 		self.initializeModel()
 
 		# # Close API and shutdown everything (for now)
@@ -124,7 +125,7 @@ class HSSFLDON_ServerApplication:
 		Initialize the model manager and load the base model.
 		"""
 		self.logger.info(f"Initializing model manager and loading base model!")
-		self.modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager()
+		self.modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(modelId=self.modelName)
 		self.globalAdapter: PeftModel = self.modelManager.getFreshModel()
 		self.modelManager.saveAdapterToFile(self.globalAdapter, self.adaptersGlobalFullPath)
 

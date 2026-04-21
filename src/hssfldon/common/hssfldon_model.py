@@ -6,10 +6,11 @@
 
 ### Library Imports
 import os
+import torch
 from dotenv import load_dotenv
+from huggingface_hub import login
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model, PeftModel
-import torch
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
@@ -18,7 +19,7 @@ class HSSFLDON_ModelManager:
     """
     The main model class for HSSFLDON.
     """
-    def __init__(self, modelId: str = "meta-llama/Llama-3.2-1B"):
+    def __init__(self, modelId: str):
 
         # Get logger
         self.logger: HSSFLDON_Logger = HSSFLDON_Logger(name=f"ModelManager")
@@ -30,6 +31,14 @@ class HSSFLDON_ModelManager:
         load_dotenv(dotenv_path='../.env')
         self.loraRank: int = int(os.getenv("HSSFLDON_LORA_RANK", 8))
         self.loraAlpha: int = int(os.getenv("HSSFLDON_LORA_ALPHA", 32))
+        self.huggingFaceAccessToken: str = os.getenv("HSSFLDON_HF_ACCESS_TOKEN", None)
+
+        # Login to HF if needed
+        if self.huggingFaceAccessToken:
+            login(token=self.huggingFaceAccessToken)
+            self.logger.info(f"Logged in to Hugging Face Hub successfully!")
+        else:
+            self.logger.warning(f"No Hugging Face access token provided. If the model `{self.modelId}` is private, model loading will fail!")
 
         # Setup base model
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
