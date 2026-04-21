@@ -121,8 +121,12 @@ class HSSFLDON_ServerApplication:
 					continue
 				clientAdaptersToMerge.append(clientAdapterPath)
 			if len(clientAdaptersToMerge) > 0:
-				#TODO: add model manager implementation
-				pass
+				self.modelManager.aggregateAdapters(
+					peftModel=self.globalAdapter,
+					clientPaths=clientAdaptersToMerge,
+					savePath=self.adaptersGlobalFullPath
+				)
+				self.logger.info(f"Completed aggregation for iteration {iteration+1} active learning!")
 			else:
 				self.logger.warning(f"No client adapters found to aggregate for iteration {iteration+1} active learning! Skipping aggregation step.")
 

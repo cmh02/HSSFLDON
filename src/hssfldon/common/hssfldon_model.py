@@ -93,9 +93,9 @@ def aggregateAdapters(self, peftModel: PeftModel, clientPaths: list[str], savePa
 		"""
 		Uses FedAvg to aggregate client adapters into new global adapter.
 		"""
-		adapterNames: list[str] = []
 		
 		# Load all client adapters into model memory
+		adapterNames: list[str] = []
 		for i, path in enumerate(clientPaths):
 			name: str = f"client_update_{i}"
 			adapterNames.append(name)
@@ -121,3 +121,6 @@ def aggregateAdapters(self, peftModel: PeftModel, clientPaths: list[str], savePa
 		for name in adapterNames:
 			peftModel.delete_adapter(name)
 		peftModel.delete_adapter("new_global_adapter")
+
+		# Log
+		self.logger.info(f"Aggregated {len(clientPaths)} client adapters into new global adapter and saved to `{savePath}` successfully!")
