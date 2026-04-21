@@ -49,6 +49,7 @@ class HSSFLDON_ServerApplication:
 		# Initialize client tracking
 		self.clients: list[int] = []
 		self.clientTasks: dict[int, HSSFLDON_ClientTask] = {}
+		self.clientUpdateStatus: dict[int, bool] = {}
 
 		# Setup API
 		self.api_host = os.getenv("HSSFLDON_SERVER_HOST", "127.0.0.1")
@@ -80,8 +81,38 @@ class HSSFLDON_ServerApplication:
 		self.logger.debug(f"Model Name: {self.modelName}")
 		self.initializeModel()
 
+		# Begin server loop for configured iterations
+		self.learningIterations: int = int(os.getenv("HSSFLDON_LEARNING_ITERATIONS", 10))
+		self.doLearningLoop()
+
 		# # Close API and shutdown everything (for now)
 		# self.closeApi()
+
+	def doLearningLoop(self):
+		"""
+		Main loop for the server application to perform learning iterations.
+		"""
+		self.logger.info(f"Starting main server learning loop for {self.learningIterations} iterations!")
+		for iteration in range(self.learningIterations):
+			self.logger.info(f"Starting learning iteration {iteration+1}/{self.learningIterations}!")
+
+			# Active Learning: Assign datapoint to each client and wait for update
+			self.enterState(HSSFLDON_ServerState.ACTIVE_LEARNING)
+			for clientId in self.clients:
+
+				# Assign active learning task to client
+				self.clientTasks[clientId] = HSSFLDON_ClientTask.ACTIVE_LEARNING
+				self.clientUpdateStatus[clientId] = False
+
+				# Wait for client update
+				self.logger.debug(f"Waiting for update from client {clientId}!")
+				while not self.clientUpdateStatus[clientId]:
+					time.sleep(1)
+
+			# Aggregation: Aggregate client updates into global model
+			self.enterState(HSSFLDON_ServerState.AGGREGATING)
+
+			
 
 	def launchApi(self) -> bool:
 		"""
@@ -123,6 +154,7 @@ class HSSFLDON_ServerApplication:
 		self.logger.info(f"Registering Client with ID: {clientId}!")
 		self.clients.append(clientId)
 		self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
+		self.clientUpdateStatus[clientId] = False
 
 	def initializeModel(self):
 		"""
