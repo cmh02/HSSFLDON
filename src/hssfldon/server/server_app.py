@@ -44,12 +44,6 @@ class HSSFLDON_ServerApplication:
 		self.logger = HSSFLDON_Logger(name=f"Server")
 		self.logger.info(f"Initialized HSSFLDON Server Application with PID: {os.getpid()}!")
 
-		# Setup model
-		self.adaptersDirectory = os.getenv("HSSFLDON_MODEL_ADAPTERS_DIRECTORY", "model_adapters")
-		self.adaptersGlobalName = os.getenv("HSSFLDON_MODEL_ADAPTERS_GLOBAL", "global")
-		self.adaptersGlobalFullPath = os.path.join(self.adaptersDirectory, self.adaptersGlobalName)
-		self.initializeModel()
-
 		# Initialize client tracking
 		self.clients: list[int] = []
 		self.clientTasks: dict[int, HSSFLDON_ClientTask] = {}
@@ -73,9 +67,16 @@ class HSSFLDON_ServerApplication:
 		registrationWindow = int(os.getenv("HSSFLDON_CLIENT_REGISTRATION_WINDOW", 30))
 		self.logger.info(f"Waiting for client registration for {registrationWindow} seconds!")
 		time.sleep(registrationWindow)
+		self.enterState(HSSFLDON_ServerState.IDLE)
 
-		# Close API and shutdown everything (for now)
-		self.closeApi()
+		# Setup model
+		self.adaptersDirectory = os.getenv("HSSFLDON_MODEL_ADAPTERS_DIRECTORY", "model_adapters")
+		self.adaptersGlobalName = os.getenv("HSSFLDON_MODEL_ADAPTERS_GLOBAL", "global")
+		self.adaptersGlobalFullPath = os.path.join(self.adaptersDirectory, self.adaptersGlobalName)
+		self.initializeModel()
+
+		# # Close API and shutdown everything (for now)
+		# self.closeApi()
 
 	def launchApi(self) -> bool:
 		"""
