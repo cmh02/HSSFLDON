@@ -15,6 +15,8 @@
 # Library Imports
 import os
 import time
+from peft import PeftModel
+import torch
 import uvicorn
 import requests
 import threading
@@ -27,7 +29,7 @@ from dotenv import load_dotenv
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
 from hssfldon.common.hssfldon_enum import HSSFLDON_ServerState, HSSFLDON_ClientTask
 from hssfldon.server.server_api import HSSFLDON_ServerAPIRouter
-
+from hssfldon.common.hssfldon_model import HSSFLDON_ModelManager
 
 class HSSFLDON_ServerApplication:
 	"""
@@ -41,6 +43,12 @@ class HSSFLDON_ServerApplication:
 		# Get logger
 		self.logger = HSSFLDON_Logger(name=f"Server")
 		self.logger.info(f"Initialized HSSFLDON Server Application with PID: {os.getpid()}!")
+
+		# Setup model
+		self.adaptersDirectory = os.getenv("HSSFLDON_MODEL_ADAPTERS_DIRECTORY", "model_adapters")
+		self.adaptersGlobalName = os.getenv("HSSFLDON_MODEL_ADAPTERS_GLOBAL", "global")
+		self.adaptersGlobalFullPath = os.path.join(self.adaptersDirectory, self.adaptersGlobalName)
+		self.initializeModel()
 
 		# Initialize client tracking
 		self.clients: list[int] = []
@@ -109,3 +117,21 @@ class HSSFLDON_ServerApplication:
 		self.logger.info(f"Registering Client with ID: {clientId}!")
 		self.clients.append(clientId)
 		self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
+
+	def initializeModel(self):
+		"""
+		Initialize the model manager and load the base model.
+		"""
+		self.logger.info(f"Initializing model manager and loading base model!")
+		self.modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager()
+		self.globalAdapter: PeftModel = self.modelManager.getFreshModel()
+		self.modelManager.saveAdapterToFile(self.globalAdapter, self.adaptersGlobalFullPath)
+
+	def shutdownModel(self):
+		"""
+		Clean up model resources.
+		"""
+		self.logger.info(f"Shutting down model and cleaning up resources!")
+		del self.globalAdapter
+		del self.modelManager
+		torch.cuda.empty_cache()
