@@ -23,6 +23,9 @@ def main() -> None:
 	simulator_logger = HSSFLDON_Logger(name=f"Simulator")
 	simulator_logger.info(f"Initialized HSSFLDON Simulator with PID: {os.getpid()}!")
 	
+	# Print CWD
+	simulator_logger.info(f"Current working directory: {os.getcwd()}")
+
 	# List for tracking all processes created by simulator
 	serverProcess: subprocess.Popen[bytes] | None = None
 	clientProcesses: list[subprocess.Popen[bytes]] = []

@@ -38,7 +38,9 @@ class HSSFLDON_ServerApplication:
 	def __init__(self):
 
 		# Parse dotenv for env variables
-		load_dotenv()
+		envStatus: bool = load_dotenv()
+		if envStatus is False:
+			print(f"Warning: .env file not found or failed to load. Make sure to create a .env file with the necessary configuration variables!")
 
 		# Get logger
 		self.logger = HSSFLDON_Logger(name=f"Server")
@@ -73,7 +75,7 @@ class HSSFLDON_ServerApplication:
 		self.adaptersDirectory = os.getenv("HSSFLDON_MODEL_ADAPTERS_DIRECTORY", "model_adapters")
 		self.adaptersGlobalName = os.getenv("HSSFLDON_MODEL_ADAPTERS_GLOBAL", "global")
 		self.adaptersGlobalFullPath = os.path.join(self.adaptersDirectory, self.adaptersGlobalName)
-		self.modelName = os.getenv("HSSFLDON_HF_MODEL_MODEL", "meta-llama/Llama-3.2-1B")
+		self.modelName = os.getenv("HSSFLDON_HF_MODEL", "meta-llama/Llama-3.2-1B")
 		self.initializeModel()
 
 		# # Close API and shutdown everything (for now)
