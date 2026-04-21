@@ -88,3 +88,36 @@ class HSSFLDON_ModelManager:
 			filePath: The path to save the adapter file to.
 		"""
 		model.save_pretrained(save_directory=filePath)
+
+def aggregateAdapters(self, peftModel: PeftModel, clientPaths: list[str], savePath: str):
+		"""
+		Uses FedAvg to aggregate client adapters into new global adapter.
+		"""
+		adapterNames: list[str] = []
+		
+		# Load all client adapters into model memory
+		for i, path in enumerate(clientPaths):
+			name: str = f"client_update_{i}"
+			adapterNames.append(name)
+			peftModel.load_adapter(path, adapter_name=name)
+			
+		# Calculate weights for averaging based on number of clients
+		weightValue: float = 1.0 / len(clientPaths)
+		weights: list[float] = [weightValue] * len(clientPaths)
+		
+		# Average weights with FedAvg into new global adapter
+		peftModel.add_weighted_adapter(
+			adapters=adapterNames,
+			weights=weights,
+			adapter_name="new_global_adapter",
+			combination_type="linear"
+		)
+		
+		# Update global adapter and save
+		peftModel.set_adapter("new_global_adapter")
+		self.saveAdapterToFile(peftModel, savePath)
+		
+		# Cleanup VRAM and model
+		for name in adapterNames:
+			peftModel.delete_adapter(name)
+		peftModel.delete_adapter("new_global_adapter")
