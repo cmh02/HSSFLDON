@@ -11,12 +11,13 @@
 
 # Library Imports
 import anyio
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from fastapi import APIRouter, Request, status
 from pydantic import BaseModel, Field
 
 # Project Imports
-from hssfldon.server.server_app import HSSFLDON_ServerApplication
+if TYPE_CHECKING:
+    from hssfldon.server.server_app import HSSFLDON_ServerApplication
 
 # Create router instance
 HSSFLDON_ServerAPIRouter = APIRouter()
@@ -52,7 +53,7 @@ async def register_client(request: Request, payload: RegisterClientRequest):
     Description: Register a new client with the server.
     """
     # Access the server application instance
-    server_app: HSSFLDON_ServerApplication = request.app.state.server_app
+    server_app: "HSSFLDON_ServerApplication" = request.app.state.server_app
 
     # Await the registration
     await anyio.to_thread.run_sync(server_app.registerClient, payload.client_id)
@@ -82,7 +83,7 @@ async def getClientTask(request: Request, payload: GetTaskRequest):
     Description: Fetch the next task for a client.
     """
     # Access the server application instance
-    server_app: HSSFLDON_ServerApplication = request.app.state.server_app
+    server_app: "HSSFLDON_ServerApplication" = request.app.state.server_app
 
     # Get task from mapping
     task = server_app.clientTasks.get(payload.client_id, None)
