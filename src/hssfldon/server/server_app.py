@@ -22,6 +22,7 @@ import requests
 import threading
 from fastapi import FastAPI
 from dotenv import load_dotenv
+from safetensors.torch import save_file, load_file
 
 
 
@@ -50,6 +51,7 @@ class HSSFLDON_ServerApplication:
 		self.clients: list[int] = []
 		self.clientTasks: dict[int, HSSFLDON_ClientTask] = {}
 		self.clientUpdateStatus: dict[int, bool] = {}
+		self.clientAdapterPathCache: dict[int, str | None] = {}
 
 		# Setup API
 		self.api_host = os.getenv("HSSFLDON_SERVER_HOST", "127.0.0.1")
@@ -109,10 +111,20 @@ class HSSFLDON_ServerApplication:
 				while not self.clientUpdateStatus[clientId]:
 					time.sleep(1)
 
-			# Aggregation: Aggregate client updates into global model
+			# Active Aggregation: Aggregate client updates into global model for active learning
 			self.enterState(HSSFLDON_ServerState.AGGREGATING)
-
-			
+			clientAdaptersToMerge: list[str] = []
+			for clientId in self.clients:
+				clientAdapterPath: str | None = self.clientAdapterPathCache[clientId]
+				if clientAdapterPath is None:
+					self.logger.warning(f"No adapter path found for client {clientId} during aggregation! Skipping client update.")
+					continue
+				clientAdaptersToMerge.append(clientAdapterPath)
+			if len(clientAdaptersToMerge) > 0:
+				#TODO: add model manager implementation
+				pass
+			else:
+				self.logger.warning(f"No client adapters found to aggregate for iteration {iteration+1} active learning! Skipping aggregation step.")
 
 	def launchApi(self) -> bool:
 		"""
@@ -155,6 +167,7 @@ class HSSFLDON_ServerApplication:
 		self.clients.append(clientId)
 		self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
 		self.clientUpdateStatus[clientId] = False
+		self.clientAdapterPathCache[clientId] = None
 
 	def initializeModel(self):
 		"""
