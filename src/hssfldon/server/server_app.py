@@ -111,6 +111,10 @@ class HSSFLDON_ServerApplication:
 				while not self.clientUpdateStatus[clientId]:
 					time.sleep(1)
 
+				# Tell client to standby until next iteration
+				self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
+				self.logger.debug(f"Received update from client {clientId} and set to standby!")
+
 			# Active Aggregation: Aggregate client updates into global model for active learning
 			self.enterState(HSSFLDON_ServerState.AGGREGATING)
 			clientAdaptersToMerge: list[str] = []
