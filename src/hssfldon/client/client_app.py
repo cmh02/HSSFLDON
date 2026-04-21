@@ -42,8 +42,30 @@ class HSSFLDON_ClientApplication:
 		self.server_port: int = int(os.getenv("HSSFLDON_SERVER_PORT", 8000))
 		self.server_api_url: str = f"http://{self.server_host}:{self.server_port}"
 
+		# Load client standby delay from env
+		self.standbyDelay: int = int(os.getenv("HSSFLDON_CLIENT_STANDBY_DELAY", 5))
+
 		# Register with server
 		self.registered: bool = self.register()
+
+	def doClientLoop(self):
+		"""
+		Main loop for the client application.
+		"""
+		self.logger.info(f"Starting main client loop!")
+		while True:
+
+			# Get next task from the server
+			task: HSSFLDON_ClientTask = self.getNextTask()
+
+			# Task: Standby
+			if (task == HSSFLDON_ClientTask.STANDBY):
+				self.logger.debug(f"Client received STANDBY task. Waiting for {self.standbyDelay} seconds before checking for new tasks!")
+				time.sleep(self.standbyDelay)
+				continue
+
+			# Task: Passive Learning
+
 
 	def checkServerHealth(self) -> bool:
 		"""
