@@ -92,3 +92,33 @@ async def getClientTask(request: Request, payload: GetTaskRequest):
         return GetTaskResponse(status="ok", message=f"Next task for client {payload.client_id} fetched successfully!", task=task.name)
     else:
         return GetTaskResponse(status="ok", message=f"No tasks available for client {payload.client_id} at this time.", task=None)
+    
+class SubmitUpdateRequest(BaseModel):
+    """
+    Request model for submitting a client update.
+    """
+    client_id: int = Field(..., gte=0, description="Unique identifier for the client")
+    adapter_path: str = Field(..., description="Path to the client's model adapter directory")
+
+class SubmitUpdateResponse(BaseModel):
+    """
+    Response model for submitting a client update.
+    """
+    status: str = Field(..., description="Status of the submission request")
+    message: str = Field(..., description="Additional information about the submission result")
+
+@HSSFLDON_ServerAPIRouter.post("/submit_update", response_model=SubmitUpdateResponse, status_code=status.HTTP_200_OK, tags=["Client Management"])
+async def submitClientUpdate(request: Request, payload: SubmitUpdateRequest):
+    """
+    API Endpoint: /submit_update
+    Method: POST
+    Description: Submit a client update to the server.
+    """
+    # Access the server application instance
+    server_app: "HSSFLDON_ServerApplication" = request.app.state.server_app
+
+    # Mark as received and store path
+    server_app.clientUpdateStatus[payload.client_id] = True
+    server_app.clientAdapterPathCache[payload.client_id] = payload.adapter_path
+
+    return SubmitUpdateResponse(status="ok", message=f"Client {payload.client_id} update submitted successfully!")
