@@ -52,12 +52,12 @@ def main() -> None:
 			)
 			clientProcesses.append(client)
 
-		time.sleep(180)
+		# Just keep the simulator running until interrupted
+		while True:
+			time.sleep(60)
 
 	except KeyboardInterrupt as e:
 		simulator_logger.info("Received KeyboardInterrupt, shutting down simulator!")
-			
-	finally:
 
 		# Quick grab of all processes
 		allProcesses: list[subprocess.Popen[bytes] | None] = [serverProcess] + clientProcesses
