@@ -107,6 +107,21 @@ class GetGlobalModelResponse(BaseModel):
     message: str = Field(..., description="Additional information about the request result")
     adapter_path: Optional[str] = Field(None, description="The path to the global model adapter, if available")
 
+@HSSFLDON_ServerAPIRouter.get("/global_model", response_model=GetGlobalModelResponse, status_code=status.HTTP_200_OK, tags=["Model Management"])
+async def getGlobalModel(request: Request, payload: GetGlobalModelRequest):
+    """
+    API Endpoint: /global_model
+    Method: GET
+    Description: Fetch the global model adapter.
+    """
+    # Access the server application instance
+    server_app: "HSSFLDON_ServerApplication" = request.app.state.server_app
+
+    # Get the global model adapter path (for now, just return a placeholder)
+    adapter_path = server_app.globalAdapterPath
+
+    return GetGlobalModelResponse(status="ok", message=f"Global model adapter fetched successfully!", adapter_path=adapter_path)
+
 class SubmitUpdateRequest(BaseModel):
     """
     Request model for submitting a client update.
