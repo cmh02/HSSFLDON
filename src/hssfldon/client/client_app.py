@@ -254,7 +254,7 @@ class HSSFLDON_ClientApplication:
 			response: requests.Response = requests.get(f"{self.server_api_url}/task?client_id={self.client_id}")
 			response.raise_for_status()
 			data: dict = response.json()
-			task: HSSFLDON_ClientTask = HSSFLDON_ClientTask(data.get("task"))
+			task: HSSFLDON_ClientTask = HSSFLDON_ClientTask[data.get("task")]
 			self.logger.info(f"Received task from server: {task.name}")
 			return task
 		except Exception as e:
