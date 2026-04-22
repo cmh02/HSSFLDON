@@ -10,6 +10,7 @@ import torch
 from dotenv import load_dotenv
 from huggingface_hub import login
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from tokenizers import AddedToken
 from peft import LoraConfig, get_peft_model, PeftModel
 
 # Project Imports
@@ -51,7 +52,10 @@ class HSSFLDON_ModelManager:
 			torch_dtype=torch.bfloat16,
 			device_map=self.device
 		)
-		self.tokenizer = AutoTokenizer.from_pretrained(self.modelId)
+		self.tokenizer = AutoTokenizer.from_pretrained(
+			pretrained_model_name_or_path=self.modelId,
+			model_max_length=512,
+		)
 		self.tokenizer.pad_token = self.tokenizer.eos_token
 		self.lora_config = LoraConfig(r=self.loraRank, lora_alpha=self.loraAlpha, target_modules=["q_proj", "v_proj"])
 		self.logger.info(f"Initialized base model `{self.modelId}` on device `{self.device}` with LoRA config: `rank={self.loraRank}`, `alpha={self.loraAlpha}`!")
