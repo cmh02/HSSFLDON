@@ -12,7 +12,7 @@
 # Library Imports
 import anyio
 from typing import Optional, TYPE_CHECKING
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, Request, status, Depends
 from pydantic import BaseModel, Field
 
 # Project Imports
@@ -76,7 +76,7 @@ class GetTaskResponse(BaseModel):
     task: Optional[str] = Field(None, description="The next task assigned to the client, if available")
 
 @HSSFLDON_ServerAPIRouter.get("/task", response_model=GetTaskResponse, status_code=status.HTTP_200_OK, tags=["Client Management"])
-async def getClientTask(request: Request, payload: GetTaskRequest):
+async def getClientTask(request: Request, payload: GetTaskRequest = Depends()):
     """
     API Endpoint: /task
     Method: GET
@@ -108,7 +108,7 @@ class GetGlobalModelResponse(BaseModel):
     adapter_path: Optional[str] = Field(None, description="The path to the global model adapter, if available")
 
 @HSSFLDON_ServerAPIRouter.get("/global_model", response_model=GetGlobalModelResponse, status_code=status.HTTP_200_OK, tags=["Model Management"])
-async def getGlobalModel(request: Request, payload: GetGlobalModelRequest):
+async def getGlobalModel(request: Request, payload: GetGlobalModelRequest=Depends()):
     """
     API Endpoint: /global_model
     Method: GET
