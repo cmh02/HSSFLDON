@@ -75,11 +75,11 @@ class GetTaskResponse(BaseModel):
     message: str = Field(..., description="Additional information about the request result")
     task: Optional[str] = Field(None, description="The next task assigned to the client, if available")
 
-@HSSFLDON_ServerAPIRouter.post("/task", response_model=GetTaskResponse, status_code=status.HTTP_200_OK, tags=["Client Management"])
+@HSSFLDON_ServerAPIRouter.get("/task", response_model=GetTaskResponse, status_code=status.HTTP_200_OK, tags=["Client Management"])
 async def getClientTask(request: Request, payload: GetTaskRequest):
     """
     API Endpoint: /task
-    Method: POST
+    Method: GET
     Description: Fetch the next task for a client.
     """
     # Access the server application instance
