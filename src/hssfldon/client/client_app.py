@@ -122,7 +122,8 @@ class HSSFLDON_ClientApplication:
 			save_strategy="no",                 # Don't waste disk space on checkpoints
 			logging_steps=10,
 			dataset_text_field="text",
-			max_length=512                 		# Keep sequence length manageable for SLMs
+			max_length=512,                 	#Keep sequence length manageable for SLMs
+			disable_tqdm=True
 		)
 		trainer = SFTTrainer(
 			model=clientModel,
