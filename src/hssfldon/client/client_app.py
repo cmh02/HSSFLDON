@@ -77,7 +77,13 @@ class HSSFLDON_ClientApplication:
 			# Task: Passive Learning
 			elif (task == HSSFLDON_ClientTask.DO_PASSIVE_LEARNING):
 				self.logger.debug(f"Client received DO_PASSIVE_LEARNING task. Starting passive learning process!")
-				self.doPassiveLearning(modelManager=HSSFLDON_ModelManager(modelId=self.modelName))
+				modelManager = HSSFLDON_ModelManager(modelId=self.modelName)
+				self.doPassiveLearning(modelManager=modelManager)
+				del modelManager
+				torch.cuda.empty_cache()
+				gc.collect()
+				continue
+
 
 	def doPassiveLearning(self, modelManager: HSSFLDON_ModelManager):
 		"""
@@ -117,14 +123,12 @@ class HSSFLDON_ClientApplication:
 
 		# Save adapter
 		localAdapterPath = os.path.join(self.adaptersDirectory, f"client_{self.clientId}_update")
-		self.modelManager.saveAdapterToFile(clientModel, localAdapterPath)
+		modelManager.saveAdapterToFile(clientModel, localAdapterPath)
 		self.logger.debug(f"Saved client adapter to `{localAdapterPath}`!")
 
-		# Cleanup VRAM and force garbage collection
+		# Cleanup
 		del clientModel
 		del trainer
-		torch.cuda.empty_cache()
-		gc.collect()
 
 		# Send update to server
 		self.logger.info("Passive learning complete. Notifying server.")
