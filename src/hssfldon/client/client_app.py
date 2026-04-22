@@ -47,6 +47,11 @@ class HSSFLDON_ClientApplication:
 		# Get data directory from env
 		self.dataDirectory: str = os.getenv("HSSFLDON_CLIENT_DATA_DIRECTORY", "data")
 
+		# Build adapters directory path
+		self.adaptersDirectory: str = os.getenv("HSSFLDON_CLIENT_ADAPTERS_DIRECTORY", "adapters")
+		self.adaptersDirectoryClientPrefix: str = os.getenv("HSSFLDON_MODEL_ADAPTERS_CLIENT", "clients")
+		self.adaptersDirectoryClientPath: str = os.path.join(self.adaptersDirectory, self.adaptersDirectoryClientPrefix, f"Client_{self.client_id}")
+
 		# Get logger
 		self.logger: HSSFLDON_Logger = HSSFLDON_Logger(name=f"Client {self.client_id}")
 		self.logger.info(f"Initialized HSSFLDON Client Application with PID: {os.getpid()}!")
@@ -100,7 +105,7 @@ class HSSFLDON_ClientApplication:
 		"""
 		self.logger.info(f"Starting passive learning process!")
 
-		# Get the global adapter and load it
+		# Get the global adapter path and load it
 		globalAdapterPath: str = self.getGlobalAdapterPath()
 		if not globalAdapterPath:
 			self.logger.error(f"Failed to retrieve global adapter path from server. Cannot perform passive learning without global model!")
@@ -118,12 +123,20 @@ class HSSFLDON_ClientApplication:
 			gradient_accumulation_steps=4,      # Simulates a larger batch size
 			num_train_epochs=1,                 # 1 epoch is standard per FL round
 			fp16=False,                         
-            bf16=True,
+			bf16=True,
 			save_strategy="no",                 # Don't waste disk space on checkpoints
 			logging_steps=10,
 			dataset_text_field="text",
 			max_length=512,                 	#Keep sequence length manageable for SLMs
-			disable_tqdm=True
+
+			# Disable progress bars to reduce clutter
+			disable_tqdm=True,
+			
+			# Gradient clipping & lr warmup to stabalize training
+			max_grad_norm=0.3,
+			warmup_ratio=0.05,
+			lr_scheduler_type="cosine"
+
 		)
 		trainer = SFTTrainer(
 			model=clientModel,
@@ -135,7 +148,7 @@ class HSSFLDON_ClientApplication:
 		trainer.train()
 
 		# Save adapter
-		localAdapterPath = os.path.join(self.adaptersDirectory, f"Client_{self.client_id}")
+		localAdapterPath = os.path.join(self.adaptersDirectoryClientPath)
 		modelManager.saveAdapterToFile(clientModel, localAdapterPath)
 		self.logger.debug(f"Saved client adapter to `{localAdapterPath}`!")
 
