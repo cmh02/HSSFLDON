@@ -77,7 +77,7 @@ class HSSFLDON_ModelManager:
 		if not os.path.exists(filePath):
 			raise FileNotFoundError(f"Adapter file not found at path: {filePath}")
 		
-		return PeftModel.from_pretrained(model=self.base_model, adapter_name=filePath, is_trainable=True)
+		return PeftModel.from_pretrained(model=self.base_model, model_id=self.modelId, adapter_name=filePath, is_trainable=True)
 
 	def saveAdapterToFile(self, model: PeftModel, filePath: str):
 		"""
