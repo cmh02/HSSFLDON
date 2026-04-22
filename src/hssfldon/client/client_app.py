@@ -90,6 +90,7 @@ class HSSFLDON_ClientApplication:
 				del modelManager
 				torch.cuda.empty_cache()
 				gc.collect()
+				time.sleep(self.standbyDelay)
 				continue
 
 
