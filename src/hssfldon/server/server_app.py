@@ -98,12 +98,12 @@ class HSSFLDON_ServerApplication:
 		for iteration in range(self.learningIterations):
 			self.logger.info(f"Starting learning iteration {iteration+1}/{self.learningIterations}!")
 
-			# Active Learning: Assign datapoint to each client and wait for update
-			self.enterState(HSSFLDON_ServerState.ACTIVE_LEARNING)
+			# Passive Learning: Assign datapoint to each client and wait for update
+			self.enterState(HSSFLDON_ServerState.PASSIVE_LEARNING)
 			for clientId in self.clients:
 
-				# Assign active learning task to client
-				self.clientTasks[clientId] = HSSFLDON_ClientTask.ACTIVE_LEARNING
+				# Assign passive learning task to client
+				self.clientTasks[clientId] = HSSFLDON_ClientTask.PASSIVE_LEARNING
 				self.clientUpdateStatus[clientId] = False
 
 				# Wait for client update
@@ -115,7 +115,7 @@ class HSSFLDON_ServerApplication:
 				self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
 				self.logger.debug(f"Received update from client {clientId} and set to standby!")
 
-			# Active Aggregation: Aggregate client updates into global model for active learning
+			# Passive Aggregation: Aggregate client updates into global model for passive learning
 			self.enterState(HSSFLDON_ServerState.AGGREGATING)
 			clientAdaptersToMerge: list[str] = []
 			for clientId in self.clients:
@@ -130,9 +130,9 @@ class HSSFLDON_ServerApplication:
 					clientPaths=clientAdaptersToMerge,
 					savePath=self.adaptersGlobalFullPath
 				)
-				self.logger.info(f"Completed aggregation for iteration {iteration+1} active learning!")
+				self.logger.info(f"Completed aggregation for iteration {iteration+1} passive learning!")
 			else:
-				self.logger.warning(f"No client adapters found to aggregate for iteration {iteration+1} active learning! Skipping aggregation step.")
+				self.logger.warning(f"No client adapters found to aggregate for iteration {iteration+1} passive learning! Skipping aggregation step.")
 
 	def launchApi(self) -> bool:
 		"""
