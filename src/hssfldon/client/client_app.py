@@ -117,7 +117,8 @@ class HSSFLDON_ClientApplication:
 			per_device_train_batch_size=2,      # Keep this small to save VRAM (1 or 2)
 			gradient_accumulation_steps=4,      # Simulates a larger batch size
 			num_train_epochs=1,                 # 1 epoch is standard per FL round
-			fp16=True,                          # CRITICAL: Match float16 to save VRAM
+			fp16=False,                         
+            bf16=True,
 			save_strategy="no",                 # Don't waste disk space on checkpoints
 			logging_steps=10,
 			dataset_text_field="text",
