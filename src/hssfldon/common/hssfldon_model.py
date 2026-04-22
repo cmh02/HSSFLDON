@@ -52,6 +52,7 @@ class HSSFLDON_ModelManager:
 			device_map=self.device
 		)
 		self.tokenizer = AutoTokenizer.from_pretrained(self.modelId)
+		self.tokenizer.pad_token = self.tokenizer.eos_token
 		self.lora_config = LoraConfig(r=self.loraRank, lora_alpha=self.loraAlpha, target_modules=["q_proj", "v_proj"])
 		self.logger.info(f"Initialized base model `{self.modelId}` on device `{self.device}` with LoRA config: `rank={self.loraRank}`, `alpha={self.loraAlpha}`!")
 
