@@ -16,7 +16,7 @@ import gc
 import time
 import torch
 import requests
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 from dotenv import load_dotenv
 from transformers import TrainingArguments
 from datasets import load_dataset, Dataset
@@ -112,27 +112,27 @@ class HSSFLDON_ClientApplication:
 		trainDataset = self.getData() 
 
 		# Configure training arguments and train
-		trainingArgs = TrainingArguments(
-			output_dir=f"./temp_outputs/client_{self.clientId}",
+		trainingArgs = SFTConfig(
+			output_dir=f"./temp_outputs/client_{self.client_id}",
 			per_device_train_batch_size=2,      # Keep this small to save VRAM (1 or 2)
 			gradient_accumulation_steps=4,      # Simulates a larger batch size
 			num_train_epochs=1,                 # 1 epoch is standard per FL round
 			fp16=True,                          # CRITICAL: Match float16 to save VRAM
 			save_strategy="no",                 # Don't waste disk space on checkpoints
-			logging_steps=10
+			logging_steps=10,
+			dataset_text_field="text",
+			max_length=512                 		# Keep sequence length manageable for SLMs
 		)
 		trainer = SFTTrainer(
 			model=clientModel,
-			tokenizer=modelManager.tokenizer,
+			processing_class=modelManager.tokenizer,
 			train_dataset=trainDataset,
-			dataset_text_field="text",          # Ensure your dataset has a 'text' column
-			max_seq_length=512,                 # Keep sequence length manageable for SLMs
 			args=trainingArgs
 		)
 		trainer.train()
 
 		# Save adapter
-		localAdapterPath = os.path.join(self.adaptersDirectory, f"Client_{self.clientId}")
+		localAdapterPath = os.path.join(self.adaptersDirectory, f"Client_{self.client_id}")
 		modelManager.saveAdapterToFile(clientModel, localAdapterPath)
 		self.logger.debug(f"Saved client adapter to `{localAdapterPath}`!")
 
@@ -151,7 +151,7 @@ class HSSFLDON_ClientApplication:
 		"""
 
 		# Make path
-		dataPath: str = os.path.join(self.dataDirectory, f"clients/Client_{self.clientId}.parquet")
+		dataPath: str = os.path.join(self.dataDirectory, f"clients/Client_{self.client_id}.parquet")
 		if not os.path.exists(dataPath):
 			self.logger.error(f"Data file missing: {dataPath}")
 			raise FileNotFoundError(f"Cannot train without data: {dataPath}")
