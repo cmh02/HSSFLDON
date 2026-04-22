@@ -32,9 +32,11 @@ def main() -> None:
 	
 	try:
 		# Start server entrypoint
+		server_env = os.environ.copy()
+		server_env["PYTHONUTF8"] = "1"
 		server: subprocess.Popen[bytes] = subprocess.Popen(
 			args=[sys.executable, "-m", "hssfldon.server.server_main"],
-			env=os.environ.copy(),
+			env=server_env,
 		)
 		serverProcess = server
 
@@ -45,6 +47,7 @@ def main() -> None:
 		client_count: int = 3
 		for i in range(client_count):
 			env: dict[str, str] = os.environ.copy()
+			env["PYTHONUTF8"] = "1"
 			env["HSSFLDON_CLIENT_ID"] = str(i)
 			client: subprocess.Popen[bytes] = subprocess.Popen(
 				args=[sys.executable, "-m", "hssfldon.client.client_main"],
