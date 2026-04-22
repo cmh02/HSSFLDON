@@ -78,7 +78,7 @@ class HSSFLDON_ServerApplication:
 		self.adaptersDirectory = os.getenv("HSSFLDON_MODEL_ADAPTERS_DIRECTORY", "adapters")
 		self.adaptersGlobalName = os.getenv("HSSFLDON_MODEL_ADAPTERS_GLOBAL", "global")
 		self.adaptersGlobalFullPath = os.path.join(self.adaptersDirectory, self.adaptersGlobalName)
-		self.modelName = os.getenv("HSSFLDON_HF_MODEL", "meta-llama/Llama-3.2-1B")
+		self.modelName: str | None = os.getenv("HSSFLDON_HF_MODEL", None)
 		self.logger.debug(f"Global Adapter Path: {self.adaptersGlobalFullPath}")
 		self.logger.debug(f"Model Name: {self.modelName}")
 		self.initializeModel()
@@ -103,7 +103,7 @@ class HSSFLDON_ServerApplication:
 			for clientId in self.clients:
 
 				# Assign passive learning task to client
-				self.clientTasks[clientId] = HSSFLDON_ClientTask.PASSIVE_LEARNING
+				self.clientTasks[clientId] = HSSFLDON_ClientTask.DO_PASSIVE_LEARNING
 				self.clientUpdateStatus[clientId] = False
 
 				# Wait for client update
