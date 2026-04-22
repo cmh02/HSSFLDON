@@ -62,6 +62,10 @@ class HSSFLDON_ClientApplication:
 		# Register with server
 		self.registered: bool = self.register()
 
+		# Start main client loop
+		if self.registered:
+			self.doClientLoop()
+
 	def doClientLoop(self):
 		"""
 		Main loop for the client application.
