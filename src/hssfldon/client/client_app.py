@@ -12,12 +12,17 @@
 
 # Library Imports
 import os
+import gc
 import time
+import torch
 import requests
+from trl import SFTTrainer
 from dotenv import load_dotenv
+from transformers import TrainingArguments
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
+from hssfldon.common.hssfldon_model import HSSFLDON_ModelManager
 from hssfldon.common.hssfldon_enum import HSSFLDON_ClientState, HSSFLDON_ClientTask
 
 
@@ -34,6 +39,9 @@ class HSSFLDON_ClientApplication:
  
 		# Get client ID from env
 		self.client_id: int = int(os.getenv("HSSFLDON_CLIENT_ID", f"{os.getpid()}"))
+
+		# Get model ID from env
+		self.modelName: str  |  None = os.getenv("HSSFLDON_HF_MODEL", None)
 
 		# Get logger
 		self.logger: HSSFLDON_Logger = HSSFLDON_Logger(name=f"Client {self.client_id}")
@@ -67,7 +75,77 @@ class HSSFLDON_ClientApplication:
 				continue
 
 			# Task: Passive Learning
+			elif (task == HSSFLDON_ClientTask.DO_PASSIVE_LEARNING):
+				self.logger.debug(f"Client received DO_PASSIVE_LEARNING task. Starting passive learning process!")
+				self.doPassiveLearning(modelManager=HSSFLDON_ModelManager(modelId=self.modelName))
 
+	def doPassiveLearning(self, modelManager: HSSFLDON_ModelManager):
+		"""
+		Perform the passive learning process for the client.
+		"""
+		self.logger.info(f"Starting passive learning process!")
+
+		# Get the global adapter and load it
+		globalAdapterPath: str = self.getGlobalAdapterPath()
+		if not globalAdapterPath:
+			self.logger.error(f"Failed to retrieve global adapter path from server. Cannot perform passive learning without global model!")
+			return
+		clientModel = modelManager.loadAdapterFromFile(globalAdapterPath)
+		self.logger.debug(f"Successfully loaded global adapter from `{globalAdapterPath}`!")
+
+		# Grab training data
+		trainDataset = self.getData() 
+
+		# Configure training arguments and train
+		trainingArgs = TrainingArguments(
+			output_dir=f"./temp_outputs/client_{self.clientId}",
+			per_device_train_batch_size=2,      # Keep this small to save VRAM (1 or 2)
+			gradient_accumulation_steps=4,      # Simulates a larger batch size
+			num_train_epochs=1,                 # 1 epoch is standard per FL round
+			fp16=True,                          # CRITICAL: Match float16 to save VRAM
+			save_strategy="no",                 # Don't waste disk space on checkpoints
+			logging_steps=10
+		)
+		trainer = SFTTrainer(
+			model=clientModel,
+			train_dataset=trainDataset,
+			dataset_text_field="text",          # Ensure your dataset has a 'text' column
+			max_seq_length=512,                 # Keep sequence length manageable for SLMs
+			args=trainingArgs
+		)
+		trainer.train()
+
+		# Save adapter
+		localAdapterPath = os.path.join(self.adaptersDirectory, f"client_{self.clientId}_update")
+		self.modelManager.saveAdapterToFile(clientModel, localAdapterPath)
+		self.logger.debug(f"Saved client adapter to `{localAdapterPath}`!")
+
+		# Cleanup VRAM and force garbage collection
+		del clientModel
+		del trainer
+		torch.cuda.empty_cache()
+		gc.collect()
+
+		# Send update to server
+		self.logger.info("Passive learning complete. Notifying server.")
+		self.submitUpdateToServer(localAdapterPath)
+
+	def getData(self):
+		pass
+
+	def getGlobalAdapterPath(self):
+		"""
+		Get the global model adapter path from the server.
+		"""
+		self.logger.debug(f"Making request to fetch global model adapter path from server!")
+		try:
+			response: requests.Response = requests.get(f"{self.server_api_url}/global_model")
+			response.raise_for_status()
+			self.logger.debug(f"Successfully fetched global model adapter path from server!")
+			return response.json().get("adapter_path")
+		except Exception as e:
+			self.logger.error(f"An exception occurred while fetching global model adapter path: {e}")
+		return None
 
 	def checkServerHealth(self) -> bool:
 		"""
@@ -143,3 +221,32 @@ class HSSFLDON_ClientApplication:
 		except Exception as e:
 			self.logger.error(f"An exception occurred while fetching next task: {e}")
 		return HSSFLDON_ClientTask.STANDBY
+	
+	def submitUpdateToServer(self, adapterPath: str):
+		"""
+		Submit the updated local adapter to the server.
+
+		Args:
+			adapterPath: The file path to the updated local adapter.
+		"""
+		self.logger.debug(f"Submitting updated adapter to server from path: {adapterPath}")
+		
+		# Build payload
+		payload = {
+			"client_id": self.client_id,
+			"adapter_path": adapterPath
+		}
+		headers = {"Content-Type": "application/json"}
+
+
+		try:
+			response: requests.Response = requests.post(
+				f"{self.server_api_url}/submit_update",
+				json=payload,
+				headers=headers
+			)
+			response.raise_for_status()
+			data: dict = response.json()
+			self.logger.info(f"Successfully submitted update to server! Server response: {data.get('message')}")
+		except Exception as e:
+			self.logger.error(f"An exception occurred while submitting update to server: {e}")
