@@ -126,7 +126,7 @@ class HSSFLDON_ClientApplication:
 			bf16=True,
 			save_strategy="no",                 # Don't waste disk space on checkpoints
 			logging_steps=10,
-			dataset_text_field="text",
+			dataset_text_field="slm_prompt_labeled",
 			max_length=512,                 	#Keep sequence length manageable for SLMs
 
 			# Disable progress bars to reduce clutter
