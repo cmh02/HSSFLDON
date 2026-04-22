@@ -19,6 +19,7 @@ import requests
 from trl import SFTTrainer
 from dotenv import load_dotenv
 from transformers import TrainingArguments
+from datasets import load_dataset, Dataset
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
@@ -42,6 +43,9 @@ class HSSFLDON_ClientApplication:
 
 		# Get model ID from env
 		self.modelName: str  |  None = os.getenv("HSSFLDON_HF_MODEL", None)
+
+		# Get data directory from env
+		self.dataDirectory: str = os.getenv("HSSFLDON_CLIENT_DATA_DIRECTORY", "data")
 
 		# Get logger
 		self.logger: HSSFLDON_Logger = HSSFLDON_Logger(name=f"Client {self.client_id}")
@@ -122,7 +126,7 @@ class HSSFLDON_ClientApplication:
 		trainer.train()
 
 		# Save adapter
-		localAdapterPath = os.path.join(self.adaptersDirectory, f"client_{self.clientId}_update")
+		localAdapterPath = os.path.join(self.adaptersDirectory, f"Client_{self.clientId}")
 		modelManager.saveAdapterToFile(clientModel, localAdapterPath)
 		self.logger.debug(f"Saved client adapter to `{localAdapterPath}`!")
 
@@ -134,8 +138,34 @@ class HSSFLDON_ClientApplication:
 		self.logger.info("Passive learning complete. Notifying server.")
 		self.submitUpdateToServer(localAdapterPath)
 
-	def getData(self):
-		pass
+	def getData(self) -> Dataset:
+		"""
+		Loads pre-processed training data for this specific client from a Parquet file.
+		Returns a Hugging Face Dataset object formatted for the SFTTrainer.
+		"""
+
+		# Make path
+		dataPath: str = os.path.join(self.dataDirectory, f"clients/Client_{self.clientId}.parquet")
+		if not os.path.exists(dataPath):
+			self.logger.error(f"Data file missing: {dataPath}")
+			raise FileNotFoundError(f"Cannot train without data: {dataPath}")
+
+		# Load dataset from Parquet file
+		hf_dataset = load_dataset("parquet", data_files=dataPath, split="train")
+		if len(hf_dataset) == 0:
+			self.logger.error(f"Loaded dataset is empty from path: {dataPath}")
+			raise ValueError(f"Cannot train on empty dataset: {dataPath}")
+		
+		# Remove uneeded columns for client training
+		columns_to_remove = [col for col in hf_dataset.column_names if col != "slm_prompt_labeled"]
+		hf_dataset = hf_dataset.remove_columns(columns_to_remove)
+
+		# Rename the target column to "text"
+		hf_dataset = hf_dataset.rename_column("slm_prompt_labeled", "text")
+
+		# Log and return
+		self.logger.info(f"Loaded dataset with {len(hf_dataset)} examples from `{dataPath}`!")
+		return hf_dataset
 
 	def getGlobalAdapterPath(self):
 		"""
