@@ -118,7 +118,7 @@ async def getGlobalModel(request: Request, payload: GetGlobalModelRequest=Depend
     server_app: "HSSFLDON_ServerApplication" = request.app.state.server_app
 
     # Get the global model adapter path (for now, just return a placeholder)
-    adapter_path = server_app.globalAdapterPath
+    adapter_path = server_app.adaptersGlobalFullPath
 
     return GetGlobalModelResponse(status="ok", message=f"Global model adapter fetched successfully!", adapter_path=adapter_path)
 
