@@ -9,7 +9,7 @@ import os
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-
+from transformers import TrainerCallback
 
 class HSSFLDON_Logger:
 	"""
@@ -141,3 +141,23 @@ class HSSFLDON_Logger:
 		handler.setLevel(self.level)
 		handler.setFormatter(self.formatter)
 		return handler
+	
+class HSSFLDON_TrainerCallbackLogger(TrainerCallback):
+	"""
+	A TrainerCallback for logging training progress in HSSFLDON.
+	"""
+	def __init__(self, logger: HSSFLDON_Logger):
+		self.logger = logger
+
+	def on_log(self, args, state, control, logs=None, **kwargs):
+		if logs is not None:
+
+			# Grab max_steps to create a fraction: e.g., "Step: 10/500"
+			step_str = f"Step: {state.global_step}/{state.max_steps}"
+			epoch_str = f"Epoch: {round(state.epoch, 2) if state.epoch else 'N/A'}"
+			
+			# Format the metrics
+			metrics_str = " | ".join([f"{k}: {round(v, 6) if isinstance(v, float) else v}" for k, v in logs.items()])
+			
+			# Send it to the logger
+			self.logger.debug(f"[HF Trainer] {step_str} | {epoch_str} | {metrics_str}")

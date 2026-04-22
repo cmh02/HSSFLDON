@@ -22,7 +22,7 @@ from transformers import TrainingArguments
 from datasets import load_dataset, Dataset
 
 # Project Imports
-from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
+from hssfldon.common.hssfldon_logger import HSSFLDON_Logger, HSSFLDON_TrainerCallbackLogger
 from hssfldon.common.hssfldon_model import HSSFLDON_ModelManager
 from hssfldon.common.hssfldon_enum import HSSFLDON_ClientState, HSSFLDON_ClientTask
 
@@ -129,7 +129,8 @@ class HSSFLDON_ClientApplication:
 			model=clientModel,
 			processing_class=modelManager.tokenizer,
 			train_dataset=trainDataset,
-			args=trainingArgs
+			args=trainingArgs,
+			callbacks=[HSSFLDON_TrainerCallbackLogger(logger=self.logger)]
 		)
 		trainer.train()
 
