@@ -118,6 +118,7 @@ class HSSFLDON_ClientApplication:
 		)
 		trainer = SFTTrainer(
 			model=clientModel,
+			tokenizer=modelManager.tokenizer,
 			train_dataset=trainDataset,
 			dataset_text_field="text",          # Ensure your dataset has a 'text' column
 			max_seq_length=512,                 # Keep sequence length manageable for SLMs
