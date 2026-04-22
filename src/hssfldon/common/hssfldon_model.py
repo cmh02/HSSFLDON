@@ -48,7 +48,7 @@ class HSSFLDON_ModelManager:
 		self.device = "cuda" if torch.cuda.is_available() else "cpu"
 		self.base_model = AutoModelForCausalLM.from_pretrained(
 			self.modelId, 
-			torch_dtype=torch.float16,
+			torch_dtype=torch.bfloat16,
 			device_map=self.device
 		)
 		self.tokenizer = AutoTokenizer.from_pretrained(self.modelId)
