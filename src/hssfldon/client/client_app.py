@@ -178,7 +178,7 @@ class HSSFLDON_ClientApplication:
 		"""
 		self.logger.debug(f"Making request to fetch global model adapter path from server!")
 		try:
-			response: requests.Response = requests.get(f"{self.server_api_url}/global_model")
+			response: requests.Response = requests.get(f"{self.server_api_url}/global_model?client_id={self.client_id}")
 			response.raise_for_status()
 			self.logger.debug(f"Successfully fetched global model adapter path from server!")
 			return response.json().get("adapter_path")
