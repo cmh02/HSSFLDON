@@ -6,6 +6,7 @@
 
 ### Library Imports
 import os
+import copy
 import torch
 from dotenv import load_dotenv
 from huggingface_hub import login
@@ -76,7 +77,8 @@ class HSSFLDON_ModelManager:
 		Returns:
 			An instance of the model.
 		"""
-		return get_peft_model(self.base_model, self.lora_config)
+		fresh_base = copy.deepcopy(self.base_model)
+		return get_peft_model(fresh_base, self.lora_config)
 
 	def loadAdapterFromFile(self, filePath: str) -> PeftModel:
 		"""
