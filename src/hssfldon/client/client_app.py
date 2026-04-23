@@ -179,24 +179,11 @@ class HSSFLDON_ClientApplication:
 			raise ValueError(f"Cannot train on empty dataset: {dataPath}")
 		
 		# Remove uneeded columns for client training
-		# columns_to_remove = [col for col in hf_dataset.column_names if col != "slm_prompt_labeled"]
-		# hf_dataset = hf_dataset.remove_columns(columns_to_remove)
-
-		# Format dataset 
-		categories: list[str] = ["respect", "insult", "humiliate", "status", "dehumanize","violence", "genocide", "attack_defend", "hatespeech"]
-		categoriesJoined: str = ", ".join(categories)
-		def preprocess_function(example):
-			return {
-				"prompt": [{"role": "user", "content": f"Given the categories of {categoriesJoined}, label the following text with any categories that apply. Text to classify: `{example['text']}`."}],
-				"completion": [
-					{"role": "assistant", "content": f"{example['tags']}"}
-				],
-			}
-		removeColumnsList: list[str] = [col for col in hf_dataset.column_names if col not in ["text", "tags"]]
-		hf_dataset = hf_dataset.map(preprocess_function, remove_columns=removeColumnsList)
+		columns_to_remove = [col for col in hf_dataset.column_names if col != "slm_prompt_labeled"]
+		hf_dataset = hf_dataset.remove_columns(columns_to_remove)
 
 		# Rename the target column to "text"
-		# hf_dataset = hf_dataset.rename_column("slm_prompt_labeled", "text")
+		hf_dataset = hf_dataset.rename_column("slm_prompt_labeled", "text")
 
 		# Log and return
 		self.logger.info(f"Loaded dataset with {len(hf_dataset)} examples from `{dataPath}`!")
