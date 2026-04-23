@@ -95,7 +95,7 @@ class HSSFLDON_ClientApplication:
 				del modelManager
 				torch.cuda.empty_cache()
 				gc.collect()
-				time.sleep(self.standbyDelay)
+				time.sleep(60)
 				continue
 
 
@@ -139,53 +139,73 @@ class HSSFLDON_ClientApplication:
 			self.logger.debug(f"Pre-tokenized dataset; columns now: {trainDataset.column_names}")
 		except Exception as e:
 			self.logger.error(f"Error during dataset tokenization: {e}")
+			return
 
 		# Configure training arguments and train
-		trainingArgs = SFTConfig(
-			output_dir=f"./temp_outputs/client_{self.client_id}",
-			per_device_train_batch_size=1,      # Keep this small to save VRAM (1 or 2)
-			gradient_accumulation_steps=4,      # Simulates a larger batch size
-			num_train_epochs=1,                 # 1 epoch is standard per FL round
-			fp16=False,                         
-			bf16=False,
-			learning_rate=5e-07,
-			weight_decay=0.01,
-			save_strategy="no",                 # Don't waste disk space on checkpoints
-			logging_steps=10,
-			dataset_text_field=None,
-			max_length=512,                 	#Keep sequence length manageable for SLMs
-			eos_token="<|im_end|>",
+		try:
+			trainingArgs = SFTConfig(
+				output_dir=f"./temp_outputs/client_{self.client_id}",
+				per_device_train_batch_size=1,      # Keep this small to save VRAM (1 or 2)
+				gradient_accumulation_steps=4,      # Simulates a larger batch size
+				num_train_epochs=1,                 # 1 epoch is standard per FL round
+				fp16=False,                         
+				bf16=True,
+				learning_rate=5e-07,
+				weight_decay=0.01,
+				save_strategy="no",                 # Don't waste disk space on checkpoints
+				logging_steps=10,
+				dataset_text_field=None,
 
-			# Disable progress bars to reduce clutter
-			disable_tqdm=True,
-			
-			# Gradient clipping & lr warmup to stabalize training
-			max_grad_norm=1.0,
-			warmup_steps=0,
-			lr_scheduler_type="constant"
+				# Max sequence length for qwen with our dataset
+				max_length=512,
 
-		)
-		trainer = SFTTrainer(
-			model=clientModel,
-			processing_class=modelManager.tokenizer,
-			train_dataset=trainDataset,
-			args=trainingArgs,
-			callbacks=[HSSFLDON_TrainerCallbackLogger(logger=self.logger)]
-		)
-		trainer.train()
+				# Specify eos token for qwen
+				eos_token="<|im_end|>",
+
+				# Disable progress bars to reduce clutter
+				disable_tqdm=True,
+				
+				# Gradient clipping & lr warmup to stabalize training
+				max_grad_norm=1.0,
+				warmup_steps=0,
+				lr_scheduler_type="constant"
+
+			)
+			trainer = SFTTrainer(
+				model=clientModel,
+				processing_class=modelManager.tokenizer,
+				train_dataset=trainDataset,
+				args=trainingArgs,
+				callbacks=[HSSFLDON_TrainerCallbackLogger(logger=self.logger)]
+			)
+			trainer.train()
+		except Exception as e:
+			self.logger.error(f"Error during training: {e}")
+			return
 
 		# Save adapter
-		localAdapterPath = os.path.join(self.adaptersDirectoryClientPath)
-		modelManager.saveAdapterToFile(clientModel, localAdapterPath)
-		self.logger.debug(f"Saved client adapter to `{localAdapterPath}`!")
+		try:
+			localAdapterPath = os.path.join(self.adaptersDirectoryClientPath)
+			modelManager.saveAdapterToFile(clientModel, localAdapterPath)
+			self.logger.debug(f"Saved client adapter to `{localAdapterPath}`!")
+		except Exception as e:
+			self.logger.error(f"Error saving local adapter: {e}")
+			return
 
 		# Cleanup
-		del clientModel
-		del trainer
+		try:
+			del clientModel
+			del trainer
+		except Exception as e:
+			self.logger.error(f"Error during cleanup after training: {e}")
 
 		# Send update to server
-		self.logger.info("Passive learning complete. Notifying server.")
-		self.submitUpdateToServer(localAdapterPath)
+		try:
+			self.logger.info("Passive learning complete. Notifying server.")
+			self.submitUpdateToServer(localAdapterPath)
+		except Exception as e:
+			self.logger.error(f"Error submitting update to server: {e}")
+			return
 
 	def getData(self) -> Dataset:
 		"""
