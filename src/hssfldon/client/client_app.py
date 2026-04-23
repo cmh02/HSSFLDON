@@ -158,7 +158,7 @@ class HSSFLDON_ClientApplication:
 				bf16=True if torch.cuda.is_available() else False,
 
 				# Specify LR and other optimizer params
-				learning_rate=3e-07,
+				learning_rate=5e-07,
 				weight_decay=0.01,
 				max_grad_norm=1.0,
 				warmup_steps=5,
