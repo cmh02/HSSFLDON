@@ -118,43 +118,63 @@ class HSSFLDON_ClientApplication:
 
 		# Pre-tokenize dataset to ensure consistent truncation/padding and torch format
 		# Also build `labels` for causal LM training and mask pad tokens with -100
-		try:
-			pad_id = modelManager.tokenizer.pad_token_id
-			trainDataset = trainDataset.map(
-				lambda examples: modelManager.tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512),
-				batched=True,
-			)
-			# Create labels and mask padding tokens
-			def _create_labels(batch):
-				labels = []
-				for ids in batch["input_ids"]:
-					lbl = [token if token != pad_id else -100 for token in ids]
-					labels.append(lbl)
-				return {"labels": labels}
-			trainDataset = trainDataset.map(_create_labels, batched=True)
-			# Remove original text column and set torch tensors for trainer
-			if "text" in trainDataset.column_names:
-				trainDataset = trainDataset.remove_columns(["text"])
-			trainDataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
-			self.logger.debug(f"Pre-tokenized dataset; columns now: {trainDataset.column_names}")
-		except Exception as e:
-			self.logger.error(f"Error during dataset tokenization: {e}")
-			return
+		# try:
+		# 	pad_id = modelManager.tokenizer.pad_token_id
+		# 	trainDataset = trainDataset.map(
+		# 		lambda examples: modelManager.tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512),
+		# 		batched=True,
+		# 	)
+		# 	# Create labels and mask padding tokens
+		# 	def _create_labels(batch):
+		# 		labels = []
+		# 		for ids in batch["input_ids"]:
+		# 			lbl = [token if token != pad_id else -100 for token in ids]
+		# 			labels.append(lbl)
+		# 		return {"labels": labels}
+		# 	trainDataset = trainDataset.map(_create_labels, batched=True)
+		# 	# Remove original text column and set torch tensors for trainer
+		# 	if "text" in trainDataset.column_names:
+		# 		trainDataset = trainDataset.remove_columns(["text"])
+		# 	trainDataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
+		# 	self.logger.debug(f"Pre-tokenized dataset; columns now: {trainDataset.column_names}")
+		# except Exception as e:
+		# 	self.logger.error(f"Error during dataset tokenization: {e}")
+		# 	return
+		
+		# Keep only the slm_prompt_labeled column and rename it to "text" for the trainer
+		columns_to_remove = [col for col in trainDataset.column_names if col != "slm_prompt_labeled"]
+		trainDataset = trainDataset.remove_columns(columns_to_remove)
+		trainDataset = trainDataset.rename_columns({"slm_prompt_labeled": "text"})
 
 		# Configure training arguments and train
 		try:
 			trainingArgs = SFTConfig(
+
+				# Specify temporary output (if we had checkpoints)
 				output_dir=f"./temp_outputs/client_{self.client_id}",
-				per_device_train_batch_size=1,      # Keep this small to save VRAM (1 or 2)
-				gradient_accumulation_steps=4,      # Simulates a larger batch size
-				num_train_epochs=1,                 # 1 epoch is standard per FL round
+
+				# Batching
+				per_device_train_batch_size=1,
+				gradient_accumulation_steps=4,
+				num_train_epochs=1,
+
+				# Datatype
 				fp16=False,                         
-				bf16=True,
-				learning_rate=5e-07,
+				bf16=True if torch.cuda.is_available() else False,
+
+				# Specify LR and other optimizer params
+				learning_rate=3e-07,
 				weight_decay=0.01,
-				save_strategy="no",                 # Don't waste disk space on checkpoints
+				max_grad_norm=1.0,
+				warmup_steps=5,
+				lr_scheduler_type="cosine",
+
+				# Disable checkpoints and reduce logging
+				save_strategy="no",
 				logging_steps=10,
-				dataset_text_field=None,
+
+				# Specify which field in dataset is input for model
+				dataset_text_field="text",
 
 				# Max sequence length for qwen with our dataset
 				max_length=512,
@@ -163,12 +183,7 @@ class HSSFLDON_ClientApplication:
 				eos_token="<|im_end|>",
 
 				# Disable progress bars to reduce clutter
-				disable_tqdm=True,
-				
-				# Gradient clipping & lr warmup to stabalize training
-				max_grad_norm=1.0,
-				warmup_steps=0,
-				lr_scheduler_type="constant"
+				disable_tqdm=True
 
 			)
 			trainer = SFTTrainer(
