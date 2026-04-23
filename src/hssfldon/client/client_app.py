@@ -117,16 +117,25 @@ class HSSFLDON_ClientApplication:
 		trainDataset: Dataset = self.getData()
 
 		# Pre-tokenize dataset to ensure consistent truncation/padding and torch format
-		# This avoids passing raw text through the trainer which can be fragile
+		# Also build `labels` for causal LM training and mask pad tokens with -100
 		try:
+			pad_id = modelManager.tokenizer.pad_token_id
 			trainDataset = trainDataset.map(
 				lambda examples: modelManager.tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512),
 				batched=True,
 			)
+			# Create labels and mask padding tokens
+			def _create_labels(batch):
+				labels = []
+				for ids in batch["input_ids"]:
+					lbl = [token if token != pad_id else -100 for token in ids]
+					labels.append(lbl)
+				return {"labels": labels}
+			trainDataset = trainDataset.map(_create_labels, batched=True)
 			# Remove original text column and set torch tensors for trainer
 			if "text" in trainDataset.column_names:
 				trainDataset = trainDataset.remove_columns(["text"])
-			trainDataset.set_format(type="torch", columns=["input_ids", "attention_mask"])
+			trainDataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
 			self.logger.debug(f"Pre-tokenized dataset; columns now: {trainDataset.column_names}")
 		except Exception as e:
 			self.logger.error(f"Error during dataset tokenization: {e}")
@@ -135,15 +144,15 @@ class HSSFLDON_ClientApplication:
 		trainingArgs = SFTConfig(
 			output_dir=f"./temp_outputs/client_{self.client_id}",
 			per_device_train_batch_size=2,      # Keep this small to save VRAM (1 or 2)
-			gradient_accumulation_steps=4,      # Simulates a larger batch size
+			gradient_accumulation_steps=2,      # Simulates a larger batch size
 			num_train_epochs=1,                 # 1 epoch is standard per FL round
 			fp16=False,                         
 			bf16=False,
-			learning_rate=1e-6,
+			learning_rate=5e-07,
 			weight_decay=0.01,
 			save_strategy="no",                 # Don't waste disk space on checkpoints
 			logging_steps=10,
-			dataset_text_field="text",
+			dataset_text_field=None,
 			max_length=512,                 	#Keep sequence length manageable for SLMs
 
 			# Disable progress bars to reduce clutter
@@ -151,7 +160,7 @@ class HSSFLDON_ClientApplication:
 			
 			# Gradient clipping & lr warmup to stabalize training
 			max_grad_norm=1.0,
-			warmup_ratio=0.05,
+			warmup_steps=10,
 			lr_scheduler_type="cosine"
 
 		)
