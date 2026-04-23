@@ -38,6 +38,7 @@ class HSSFLDON_ModelManager:
 		self.loraRank: int = int(os.getenv("HSSFLDON_LORA_RANK", 4))
 		self.loraAlpha: int = int(os.getenv("HSSFLDON_LORA_ALPHA", 16))
 		self.loraDropout: float = float(os.getenv("HSSFLDON_LORA_DROPOUT", 0.05))
+		self.maxTokenLength: int = int(os.getenv("HSSFLDON_MAX_TOKEN_LENGTH", 512))
 		self.huggingFaceAccessToken: str = os.getenv("HSSFLDON_HF_ACCESS_TOKEN", None)
 
 		# Login to HF if needed
@@ -51,15 +52,37 @@ class HSSFLDON_ModelManager:
 		self.device = "cuda" if torch.cuda.is_available() else "cpu"
 		self.base_model = AutoModelForCausalLM.from_pretrained(
 			self.modelId, 
-			dtype=torch.bfloat16,
+			# dtype=torch.bfloat16,
 			device_map=self.device
 		)
+
+		# Setup tokenizer
 		self.tokenizer = AutoTokenizer.from_pretrained(
 			pretrained_model_name_or_path=self.modelId,
-			model_max_length=512,
+			model_max_length=self.maxTokenLength,
 		)
-		self.tokenizer.eos_token = "<|im_end|>"
-		self.tokenizer.pad_token = self.tokenizer.eos_token
+
+		# Fix eos/pad token for qwen
+		desired = "<|im_end|>"
+		if self.tokenizer.eos_token != desired:
+
+			# Add the token if it doesn't exist
+			tok_id = self.tokenizer.convert_tokens_to_ids(desired)
+			if tok_id == self.tokenizer.unk_token_id:
+				self.tokenizer.add_special_tokens({"eos_token": desired, "pad_token": desired})
+				self.base_model.resize_token_embeddings(len(self.tokenizer))
+				self.logger.debug(f"Desired EOS/PAD token did not exist, added `{desired}` as special token and resized model embeddings successfully!")
+
+			# Set token if it does exist
+			else:
+				self.tokenizer.eos_token = desired
+				self.tokenizer.pad_token = desired
+				self.logger.debug(f"Desired EOS/PAD token existed, Tokenizer EOS and PAD tokens set to `{desired}` successfully!")
+
+		# Match config w tokenizer
+		self.base_model.config.eos_token_id = self.tokenizer.eos_token_id
+		self.base_model.config.pad_token_id = self.tokenizer.pad_token_id
+
 		self.lora_config = LoraConfig(
 			r=self.loraRank, 
 			lora_alpha=self.loraAlpha, 

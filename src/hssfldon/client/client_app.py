@@ -105,41 +105,24 @@ class HSSFLDON_ClientApplication:
 		"""
 		self.logger.info(f"Starting passive learning process!")
 
+		# Get max token length from env
+		maxTokenLength: int = int(os.getenv("HSSFLDON_MAX_TOKEN_LENGTH", 512))
+
 		# Get the global adapter path and load it
 		globalAdapterPath: str = self.getGlobalAdapterPath()
 		if not globalAdapterPath:
 			self.logger.error(f"Failed to retrieve global adapter path from server. Cannot perform passive learning without global model!")
 			return
 		clientModel = modelManager.loadAdapterFromFile(globalAdapterPath)
-		self.logger.debug(f"Successfully loaded global adapter from `{globalAdapterPath}`!")
+		numTrainableParams = sum(p.numel() for p in clientModel.parameters() if p.requires_grad)
+		self.logger.debug(f"Successfully loaded global adapter from `{globalAdapterPath}` with `{numTrainableParams}` trainable parameters!")
 
-		# Grab training data
-		trainDataset: Dataset = self.getData()
-
-		# Pre-tokenize dataset to ensure consistent truncation/padding and torch format
-		# Also build `labels` for causal LM training and mask pad tokens with -100
-		# try:
-		# 	pad_id = modelManager.tokenizer.pad_token_id
-		# 	trainDataset = trainDataset.map(
-		# 		lambda examples: modelManager.tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512),
-		# 		batched=True,
-		# 	)
-		# 	# Create labels and mask padding tokens
-		# 	def _create_labels(batch):
-		# 		labels = []
-		# 		for ids in batch["input_ids"]:
-		# 			lbl = [token if token != pad_id else -100 for token in ids]
-		# 			labels.append(lbl)
-		# 		return {"labels": labels}
-		# 	trainDataset = trainDataset.map(_create_labels, batched=True)
-		# 	# Remove original text column and set torch tensors for trainer
-		# 	if "text" in trainDataset.column_names:
-		# 		trainDataset = trainDataset.remove_columns(["text"])
-		# 	trainDataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
-		# 	self.logger.debug(f"Pre-tokenized dataset; columns now: {trainDataset.column_names}")
-		# except Exception as e:
-		# 	self.logger.error(f"Error during dataset tokenization: {e}")
-		# 	return
+		# Load data
+		try:
+			trainDataset: Dataset = self.getData()
+		except Exception as e:
+			self.logger.error(f"Error loading training data: {e}")
+			return
 
 		# Configure training arguments and train
 		try:
@@ -150,19 +133,19 @@ class HSSFLDON_ClientApplication:
 
 				# Batching
 				per_device_train_batch_size=1,
-				gradient_accumulation_steps=4,
+				gradient_accumulation_steps=1,
 				num_train_epochs=1,
 
 				# Datatype
-				fp16=False,                         
-				bf16=True if torch.cuda.is_available() else False,
+				# fp16=False,                         
+				# bf16=True,
 
 				# Specify LR and other optimizer params
 				learning_rate=5e-07,
 				weight_decay=0.01,
 				max_grad_norm=1.0,
-				warmup_steps=5,
-				lr_scheduler_type="cosine",
+				warmup_steps=0,
+				lr_scheduler_type="constant",
 
 				# Disable checkpoints and reduce logging
 				save_strategy="no",
@@ -172,7 +155,7 @@ class HSSFLDON_ClientApplication:
 				dataset_text_field="text",
 
 				# Max sequence length for qwen with our dataset
-				max_length=512,
+				max_length=maxTokenLength,
 
 				# Specify eos token for qwen
 				eos_token="<|im_end|>",
