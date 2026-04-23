@@ -86,7 +86,7 @@ class HSSFLDON_ModelManager:
 		self.lora_config = LoraConfig(
 			r=self.loraRank, 
 			lora_alpha=self.loraAlpha, 
-			target_modules=["q_proj", "v_proj"],
+			target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
 			lora_dropout=self.loraDropout,
 			bias="none",
 			task_type="CAUSAL_LM"
