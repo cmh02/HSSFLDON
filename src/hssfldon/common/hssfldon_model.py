@@ -8,12 +8,12 @@
 import os
 import copy
 import torch
+import unsloth
 from dotenv import load_dotenv
 from huggingface_hub import login
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from tokenizers import AddedToken
 from peft import LoraConfig, get_peft_model, PeftModel
-from unsloth import FastLanguageModel
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
@@ -63,7 +63,7 @@ class HSSFLDON_ModelManager:
 		# 	model_max_length=self.maxTokenLength,
 		# )
 
-		self.base_model, self.tokenizer = FastLanguageModel.from_pretrained(
+		self.base_model, self.tokenizer = unsloth.FastLanguageModel.from_pretrained(
 			model_name=self.modelId,
 			max_seq_length=self.maxTokenLength,
 			load_in_4bit=True
@@ -108,7 +108,7 @@ class HSSFLDON_ModelManager:
 			An instance of the model.
 		"""
 		fresh_base = copy.deepcopy(self.base_model)
-		return FastLanguageModel.get_peft_model(fresh_base, self.lora_config)
+		return unsloth.FastLanguageModel.get_peft_model(fresh_base, self.lora_config)
 
 	def loadAdapterFromFile(self, filePath: str) -> PeftModel:
 		"""
