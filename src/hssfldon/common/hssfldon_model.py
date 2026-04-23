@@ -69,26 +69,26 @@ class HSSFLDON_ModelManager:
 			load_in_4bit=True
 		)
 
-		# Fix eos/pad token for qwen
-		desired = "<|im_end|>"
-		if self.tokenizer.eos_token != desired:
+		# # Fix eos/pad token for qwen
+		# desired = "<|im_end|>"
+		# if self.tokenizer.eos_token != desired:
 
-			# Add the token if it doesn't exist
-			tok_id = self.tokenizer.convert_tokens_to_ids(desired)
-			if tok_id == self.tokenizer.unk_token_id:
-				self.tokenizer.add_special_tokens({"eos_token": desired, "pad_token": desired})
-				self.base_model.resize_token_embeddings(len(self.tokenizer))
-				self.logger.debug(f"Desired EOS/PAD token did not exist, added `{desired}` as special token and resized model embeddings successfully!")
+		# 	# Add the token if it doesn't exist
+		# 	tok_id = self.tokenizer.convert_tokens_to_ids(desired)
+		# 	if tok_id == self.tokenizer.unk_token_id:
+		# 		self.tokenizer.add_special_tokens({"eos_token": desired, "pad_token": desired})
+		# 		self.base_model.resize_token_embeddings(len(self.tokenizer))
+		# 		self.logger.debug(f"Desired EOS/PAD token did not exist, added `{desired}` as special token and resized model embeddings successfully!")
 
-			# Set token if it does exist
-			else:
-				self.tokenizer.eos_token = desired
-				self.tokenizer.pad_token = desired
-				self.logger.debug(f"Desired EOS/PAD token existed, Tokenizer EOS and PAD tokens set to `{desired}` successfully!")
+		# 	# Set token if it does exist
+		# 	else:
+		# 		self.tokenizer.eos_token = desired
+		# 		self.tokenizer.pad_token = desired
+		# 		self.logger.debug(f"Desired EOS/PAD token existed, Tokenizer EOS and PAD tokens set to `{desired}` successfully!")
 
-		# Match config w tokenizer
-		self.base_model.config.eos_token_id = self.tokenizer.eos_token_id
-		self.base_model.config.pad_token_id = self.tokenizer.pad_token_id
+		# # Match config w tokenizer
+		# self.base_model.config.eos_token_id = self.tokenizer.eos_token_id
+		# self.base_model.config.pad_token_id = self.tokenizer.pad_token_id
 
 		self.lora_config = LoraConfig(
 			r=self.loraRank, 
@@ -108,7 +108,7 @@ class HSSFLDON_ModelManager:
 			An instance of the model.
 		"""
 		fresh_base = copy.deepcopy(self.base_model)
-		return get_peft_model(fresh_base, self.lora_config)
+		return FastLanguageModel.get_peft_model(fresh_base, self.lora_config)
 
 	def loadAdapterFromFile(self, filePath: str) -> PeftModel:
 		"""
