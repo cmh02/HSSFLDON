@@ -146,7 +146,7 @@ class HSSFLDON_ClientApplication:
 			trainingArgs = SFTConfig(
 				output_dir=f"./temp_outputs/client_{self.client_id}",
 				per_device_train_batch_size=1,      # Keep this small to save VRAM (1 or 2)
-				gradient_accumulation_steps=1,      # Simulates a larger batch size
+				gradient_accumulation_steps=4,      # Simulates a larger batch size
 				num_train_epochs=1,                 # 1 epoch is standard per FL round
 				fp16=False,                         
 				bf16=True,
