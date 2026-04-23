@@ -123,7 +123,9 @@ class HSSFLDON_ClientApplication:
 			gradient_accumulation_steps=4,      # Simulates a larger batch size
 			num_train_epochs=1,                 # 1 epoch is standard per FL round
 			fp16=False,                         
-			bf16=True,
+			bf16=False,
+			learning_rate=5e-06,
+			weight_decay=0.01,
 			save_strategy="no",                 # Don't waste disk space on checkpoints
 			logging_steps=10,
 			dataset_text_field="text",
@@ -133,7 +135,7 @@ class HSSFLDON_ClientApplication:
 			disable_tqdm=True,
 			
 			# Gradient clipping & lr warmup to stabalize training
-			max_grad_norm=0.3,
+			max_grad_norm=1.0,
 			warmup_ratio=0.05,
 			lr_scheduler_type="cosine"
 
