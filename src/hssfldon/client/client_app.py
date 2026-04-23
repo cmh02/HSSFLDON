@@ -114,7 +114,22 @@ class HSSFLDON_ClientApplication:
 		self.logger.debug(f"Successfully loaded global adapter from `{globalAdapterPath}`!")
 
 		# Grab training data
-		trainDataset: Dataset = self.getData() 
+		trainDataset: Dataset = self.getData()
+
+		# Pre-tokenize dataset to ensure consistent truncation/padding and torch format
+		# This avoids passing raw text through the trainer which can be fragile
+		try:
+			trainDataset = trainDataset.map(
+				lambda examples: modelManager.tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512),
+				batched=True,
+			)
+			# Remove original text column and set torch tensors for trainer
+			if "text" in trainDataset.column_names:
+				trainDataset = trainDataset.remove_columns(["text"])
+			trainDataset.set_format(type="torch", columns=["input_ids", "attention_mask"])
+			self.logger.debug(f"Pre-tokenized dataset; columns now: {trainDataset.column_names}")
+		except Exception as e:
+			self.logger.error(f"Error during dataset tokenization: {e}")
 
 		# Configure training arguments and train
 		trainingArgs = SFTConfig(
