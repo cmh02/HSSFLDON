@@ -116,7 +116,6 @@ class HSSFLDON_ModelManager:
 			target_modules=self.lora_config.target_modules,
 			lora_dropout=self.lora_config.lora_dropout,
 			bias=self.lora_config.bias,
-			task_type=self.lora_config.task_type
 		)
 
 	def loadAdapterFromFile(self, filePath: str) -> PeftModel:
