@@ -154,14 +154,15 @@ class HSSFLDON_ClientApplication:
 			logging_steps=10,
 			dataset_text_field=None,
 			max_length=512,                 	#Keep sequence length manageable for SLMs
+			eos_token="<|im_end|>",
 
 			# Disable progress bars to reduce clutter
 			disable_tqdm=True,
 			
 			# Gradient clipping & lr warmup to stabalize training
 			max_grad_norm=1.0,
-			warmup_steps=10,
-			lr_scheduler_type="cosine"
+			warmup_steps=0,
+			lr_scheduler_type="constant"
 
 		)
 		trainer = SFTTrainer(
