@@ -139,7 +139,7 @@ class HSSFLDON_ClientApplication:
 			num_train_epochs=1,                 # 1 epoch is standard per FL round
 			fp16=False,                         
 			bf16=False,
-			learning_rate=5e-06,
+			learning_rate=1e-6,
 			weight_decay=0.01,
 			save_strategy="no",                 # Don't waste disk space on checkpoints
 			logging_steps=10,
