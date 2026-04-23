@@ -34,8 +34,9 @@ class HSSFLDON_ModelManager:
 		self.modelId: str = modelId
 
 		# Get needed values from env
-		self.loraRank: int = int(os.getenv("HSSFLDON_LORA_RANK", 8))
-		self.loraAlpha: int = int(os.getenv("HSSFLDON_LORA_ALPHA", 32))
+		self.loraRank: int = int(os.getenv("HSSFLDON_LORA_RANK", 4))
+		self.loraAlpha: int = int(os.getenv("HSSFLDON_LORA_ALPHA", 16))
+		self.loraDropout: float = float(os.getenv("HSSFLDON_LORA_DROPOUT", 0.05))
 		self.huggingFaceAccessToken: str = os.getenv("HSSFLDON_HF_ACCESS_TOKEN", None)
 
 		# Login to HF if needed
@@ -58,7 +59,14 @@ class HSSFLDON_ModelManager:
 		)
 		self.tokenizer.eos_token = "<|im_end|>"
 		self.tokenizer.pad_token = self.tokenizer.eos_token
-		self.lora_config = LoraConfig(r=self.loraRank, lora_alpha=self.loraAlpha, target_modules=["q_proj", "v_proj"])
+		self.lora_config = LoraConfig(
+			r=self.loraRank, 
+			lora_alpha=self.loraAlpha, 
+			target_modules=["q_proj", "v_proj"],
+			lora_dropout=self.loraDropout,
+			bias="none",
+			task_type="CAUSAL_LM"
+		)
 		self.logger.info(f"Initialized base model `{self.modelId}` on device `{self.device}` with LoRA config: `rank={self.loraRank}`, `alpha={self.loraAlpha}`!")
 
 	def getFreshModel(self) -> PeftModel:
