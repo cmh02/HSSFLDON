@@ -7,8 +7,8 @@
 ### Library Imports
 import os
 import copy
-import torch
 import unsloth
+import torch
 from dotenv import load_dotenv
 from huggingface_hub import login
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -108,7 +108,16 @@ class HSSFLDON_ModelManager:
 			An instance of the model.
 		"""
 		fresh_base = copy.deepcopy(self.base_model)
-		return unsloth.FastLanguageModel.get_peft_model(fresh_base, self.lora_config)
+		# return unsloth.FastLanguageModel.get_peft_model(fresh_base, self.lora_config)
+		return unsloth.FastLanguageModel.get_peft_model(
+			model=fresh_base,
+			r=self.lora_config.r,
+			lora_alpha=self.lora_config.lora_alpha,
+			target_modules=self.lora_config.target_modules,
+			lora_dropout=self.lora_config.lora_dropout,
+			bias=self.lora_config.bias,
+			task_type=self.lora_config.task_type
+		)
 
 	def loadAdapterFromFile(self, filePath: str) -> PeftModel:
 		"""

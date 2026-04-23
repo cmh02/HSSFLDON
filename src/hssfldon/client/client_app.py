@@ -16,6 +16,7 @@ import gc
 import ast
 import json
 import time
+import unsloth
 import torch
 import requests
 from trl import SFTTrainer, SFTConfig
