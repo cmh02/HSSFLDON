@@ -13,6 +13,7 @@ from huggingface_hub import login
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from tokenizers import AddedToken
 from peft import LoraConfig, get_peft_model, PeftModel
+from unsloth import FastLanguageModel
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
@@ -50,16 +51,22 @@ class HSSFLDON_ModelManager:
 
 		# Setup base model
 		self.device = "cuda" if torch.cuda.is_available() else "cpu"
-		self.base_model = AutoModelForCausalLM.from_pretrained(
-			self.modelId, 
-			dtype=torch.bfloat16,
-			device_map=self.device
-		)
+		# self.base_model = AutoModelForCausalLM.from_pretrained(
+		# 	self.modelId, 
+		# 	dtype=torch.bfloat16,
+		# 	device_map=self.device
+		# )
 
-		# Setup tokenizer
-		self.tokenizer = AutoTokenizer.from_pretrained(
-			pretrained_model_name_or_path=self.modelId,
-			model_max_length=self.maxTokenLength,
+		# # Setup tokenizer
+		# self.tokenizer = AutoTokenizer.from_pretrained(
+		# 	pretrained_model_name_or_path=self.modelId,
+		# 	model_max_length=self.maxTokenLength,
+		# )
+
+		self.base_model, self.tokenizer = FastLanguageModel.from_pretrained(
+			model_name=self.modelId,
+			max_seq_length=self.maxTokenLength,
+			load_in_4bit=True
 		)
 
 		# Fix eos/pad token for qwen
