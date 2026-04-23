@@ -140,11 +140,6 @@ class HSSFLDON_ClientApplication:
 		# except Exception as e:
 		# 	self.logger.error(f"Error during dataset tokenization: {e}")
 		# 	return
-		
-		# Keep only the slm_prompt_labeled column and rename it to "text" for the trainer
-		columns_to_remove = [col for col in trainDataset.column_names if col != "slm_prompt_labeled"]
-		trainDataset = trainDataset.remove_columns(columns_to_remove)
-		trainDataset = trainDataset.rename_columns({"slm_prompt_labeled": "text"})
 
 		# Configure training arguments and train
 		try:
