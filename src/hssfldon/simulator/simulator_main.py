@@ -14,6 +14,9 @@ import time
 import signal
 import subprocess
 
+# Enable cuda for debugging
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
 
