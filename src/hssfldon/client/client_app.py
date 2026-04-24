@@ -177,7 +177,10 @@ class HSSFLDON_ClientApplication:
 				eos_token="<|im_end|>",
 
 				# Disable progress bars to reduce clutter
-				disable_tqdm=True
+				disable_tqdm=True,
+
+				# Specify column for text
+				dataset_text_field="text"
 
 			)
 			trainer = SFTTrainer(
@@ -235,16 +238,16 @@ class HSSFLDON_ClientApplication:
 			self.logger.error(f"Loaded dataset is empty from path: {dataPath}")
 			raise ValueError(f"Cannot train on empty dataset: {dataPath}")
 		
-		# # Remove uneeded columns for client training
-		# columns_to_remove = [col for col in hf_dataset.column_names if col != "slm_prompt_labeled"]
-		# hf_dataset = hf_dataset.remove_columns(columns_to_remove)
+		# Remove uneeded columns for client training
+		columns_to_remove = [col for col in hf_dataset.column_names if col != "slm_prompt_labeled"]
+		hf_dataset = hf_dataset.remove_columns(columns_to_remove)
 
-		# # Rename the target column to "text"
-		# hf_dataset = hf_dataset.rename_column("slm_prompt_labeled", "text")
+		# Rename the target column to "text"
+		hf_dataset = hf_dataset.rename_column("slm_prompt_labeled", "text")
 
 		# Remove all columns except for 'messages'
-		columns_to_remove = [col for col in hf_dataset.column_names if col != "messages"]
-		hf_dataset = hf_dataset.remove_columns(columns_to_remove)
+		# columns_to_remove = [col for col in hf_dataset.column_names if col != "messages"]
+		# hf_dataset = hf_dataset.remove_columns(columns_to_remove)
 
 		# Log and return
 		self.logger.info(f"Loaded dataset with {len(hf_dataset)} examples from `{dataPath}`!")
