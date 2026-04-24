@@ -16,7 +16,6 @@ import gc
 import time
 import torch
 import requests
-from trl import SFTTrainer, SFTConfig
 from dotenv import load_dotenv
 from transformers import TrainingArguments
 from datasets import load_dataset, Dataset
@@ -41,16 +40,12 @@ class HSSFLDON_ClientApplication:
 		# Get client ID from env
 		self.client_id: int = int(os.getenv("HSSFLDON_CLIENT_ID", f"{os.getpid()}"))
 
-		# Get model ID from env
-		self.modelName: str  |  None = os.getenv("HSSFLDON_HF_MODEL", None)
-
-		# Get data directory from env
+		# Get data directory from env and make path for client
 		self.dataDirectory: str = os.getenv("HSSFLDON_CLIENT_DATA_DIRECTORY", "data")
-
-		# Build adapters directory path
-		self.adaptersDirectory: str = os.getenv("HSSFLDON_CLIENT_ADAPTERS_DIRECTORY", "adapters")
-		self.adaptersDirectoryClientPrefix: str = os.getenv("HSSFLDON_MODEL_ADAPTERS_CLIENT", "clients")
-		self.adaptersDirectoryClientPath: str = os.path.join(self.adaptersDirectory, self.adaptersDirectoryClientPrefix, f"Client_{self.client_id}")
+		self.dataPath: str = os.path.join(self.dataDirectory, f"clients/Client_{self.client_id}.parquet")
+		if not os.path.exists(self.dataPath):
+			self.logger.error(f"Data file missing: {self.dataPath}")
+			raise FileNotFoundError(f"Cannot train without data: {self.dataPath}")
 
 		# Get logger
 		self.logger: HSSFLDON_Logger = HSSFLDON_Logger(name=f"Client {self.client_id}")
@@ -90,65 +85,16 @@ class HSSFLDON_ClientApplication:
 			# Task: Passive Learning
 			elif (task == HSSFLDON_ClientTask.DO_PASSIVE_LEARNING):
 				self.logger.debug(f"Client received DO_PASSIVE_LEARNING task. Starting passive learning process!")
-				modelManager = HSSFLDON_ModelManager(modelId=self.modelName)
-				self.doPassiveLearning(modelManager=modelManager)
-				del modelManager
-				torch.cuda.empty_cache()
-				gc.collect()
+				self.doPassiveLearning()
 				time.sleep(60)
 				continue
 
 
-	def doPassiveLearning(self, modelManager: HSSFLDON_ModelManager):
+	def doPassiveLearning(self):
 		"""
 		Perform the passive learning process for the client.
 		"""
 		self.logger.info(f"Starting passive learning process!")
-
-
-
-	def getData(self) -> Dataset:
-		"""
-		Loads pre-processed training data for this specific client from a Parquet file.
-		Returns a Hugging Face Dataset object formatted for the SFTTrainer.
-		"""
-
-		# Make path
-		dataPath: str = os.path.join(self.dataDirectory, f"clients/Client_{self.client_id}.parquet")
-		if not os.path.exists(dataPath):
-			self.logger.error(f"Data file missing: {dataPath}")
-			raise FileNotFoundError(f"Cannot train without data: {dataPath}")
-
-		# Load dataset from Parquet file
-		hf_dataset = load_dataset("parquet", data_files=dataPath, split="train")
-		if len(hf_dataset) == 0:
-			self.logger.error(f"Loaded dataset is empty from path: {dataPath}")
-			raise ValueError(f"Cannot train on empty dataset: {dataPath}")
-		
-		# Remove uneeded columns for client training
-		columns_to_remove = [col for col in hf_dataset.column_names if col != "slm_prompt_labeled"]
-		hf_dataset = hf_dataset.remove_columns(columns_to_remove)
-
-		# Rename the target column to "text"
-		hf_dataset = hf_dataset.rename_column("slm_prompt_labeled", "text")
-
-		# Log and return
-		self.logger.info(f"Loaded dataset with {len(hf_dataset)} examples from `{dataPath}`!")
-		return hf_dataset
-
-	def getGlobalAdapterPath(self):
-		"""
-		Get the global model adapter path from the server.
-		"""
-		self.logger.debug(f"Making request to fetch global model adapter path from server!")
-		try:
-			response: requests.Response = requests.get(f"{self.server_api_url}/global_model?client_id={self.client_id}")
-			response.raise_for_status()
-			self.logger.debug(f"Successfully fetched global model adapter path from server!")
-			return response.json().get("adapter_path")
-		except Exception as e:
-			self.logger.error(f"An exception occurred while fetching global model adapter path: {e}")
-		return None
 
 	def checkServerHealth(self) -> bool:
 		"""
@@ -218,7 +164,7 @@ class HSSFLDON_ClientApplication:
 			response: requests.Response = requests.get(f"{self.server_api_url}/task?client_id={self.client_id}")
 			response.raise_for_status()
 			data: dict = response.json()
-			task: HSSFLDON_ClientTask = HSSFLDON_ClientTask[data.get("task")]
+			task: HSSFLDON_ClientTask = HSSFLDON_ClientTask[f"{data.get('task')}"]
 			self.logger.info(f"Received task from server: {task.name}")
 			return task
 		except Exception as e:
@@ -241,7 +187,7 @@ class HSSFLDON_ClientApplication:
 		}
 		headers = {"Content-Type": "application/json"}
 
-
+		# Send it off
 		try:
 			response: requests.Response = requests.post(
 				f"{self.server_api_url}/submit_update",
