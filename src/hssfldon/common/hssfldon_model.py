@@ -277,9 +277,6 @@ class HSSFLDON_ModelManager:
 			# Iterate over training data
 			for batch in trainingDataLoader:
 
-				# Each batch is a dict of tensors with keys like "input_ids", "attention_mask", and "labels"
-				batch = {k: v.to(self.device) for k, v in batch.items()}
-
 				# Forward pass
 				logits, labels = self._forwardPass(batch)
 				loss = torch.nn.functional.cross_entropy(logits, labels)
@@ -336,9 +333,6 @@ class HSSFLDON_ModelManager:
 
 		# Iterate over validation data
 		for batch in validationDataLoader:
-
-			# Each batch is a dict of tensors with keys like "input_ids", "attention_mask", and "labels"
-			batch = {k: v.to(self.device) for k, v in batch.items()}
 
 			# Forward pass
 			logits, labels = self._forwardPass(batch)
