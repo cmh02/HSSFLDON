@@ -8,9 +8,10 @@
 import os
 import copy
 import torch
-from typing import Tuple
+from typing import Tuple, Any
 from dotenv import load_dotenv
 from huggingface_hub import login
+from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warmup
 
 # Project Imports
@@ -251,7 +252,7 @@ class HSSFLDON_ModelManager:
 		# Return logits and labels
 		return logits, labels
 
-	def train(self, trainingDataLoader, validationDataLoader = None, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0):
+	def train(self, trainingDataLoader: DataLoader, validationDataLoader: Any = None, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0):
 		"""
 		Train the model on the given data loader.
 		"""
@@ -317,7 +318,7 @@ class HSSFLDON_ModelManager:
 		self.logger.info(f"Training completed for {epochs} epochs!")
 		return epochHistory
 
-	def evaluate(self, validationDataLoader) -> tuple[float, float]:
+	def evaluate(self, validationDataLoader: DataLoader) -> tuple[float, float]:
 		"""
 		Evaluate model on given data loader.
 		"""
@@ -364,3 +365,20 @@ class HSSFLDON_ModelManager:
 				preds = torch.argmax(logits, dim=1)
 				outputs.extend(preds.cpu().tolist())
 		return outputs
+	
+	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 16, max_length: int = 256, shuffle: bool = True):
+		from torch.utils.data import Dataset, DataLoader
+		class _SimpleDS(Dataset):
+			def __init__(self, tokenizer, texts, labels, max_length):
+				self.tokenizer = tokenizer
+				self.texts = texts
+				self.labels = labels
+				self.max_length = max_length
+			def __len__(self): return len(self.texts)
+			def __getitem__(self, idx):
+				enc = self.tokenizer(self.texts[idx], truncation=True, max_length=self.max_length, padding="max_length", return_tensors="pt")
+				item = {k: v.squeeze(0) for k, v in enc.items()}
+				item["labels"] = torch.tensor(self.labels[idx], dtype=torch.long)
+				return item
+		ds = _SimpleDS(self.tokenizer, texts, labels, max_length)
+		return DataLoader(ds, batch_size=batch_size, shuffle=shuffle, collate_fn=None)
