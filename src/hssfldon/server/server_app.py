@@ -83,6 +83,13 @@ class HSSFLDON_ServerApplication:
 		self.logger.debug(f"Model Name: {self.modelName}")
 		self.initializeModel()
 
+		# Setup data directory for server unlabeled data
+		self.dataDirectory: str = os.getenv("HSSFLDON_CLIENT_DATA_DIRECTORY", "data")
+		self.dataFilePath: str = os.path.join(self.dataDirectory, f"server/server.parquet")
+		if not os.path.exists(self.dataFilePath):
+			self.logger.error(f"Data file missing: {self.dataFilePath}")
+			raise FileNotFoundError(f"Cannot train without data: {self.dataFilePath}")		
+
 		# Begin server loop for configured iterations
 		self.learningIterations: int = int(os.getenv("HSSFLDON_LEARNING_ITERATIONS", 10))
 		self.doLearningLoop()
