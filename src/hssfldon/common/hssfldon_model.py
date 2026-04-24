@@ -8,6 +8,7 @@
 import os
 import copy
 import torch
+from typing import Tuple
 from dotenv import load_dotenv
 from huggingface_hub import login
 from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warmup
@@ -227,6 +228,17 @@ class HSSFLDON_ModelManager:
 		"""
 		return get_linear_schedule_with_warmup(optimizer, num_warmup_steps=numWarmupSteps, num_training_steps=numTrainingSteps)
 	
+	def _forwardPass(self, batch: dict) -> Tuple[torch.Tensor, torch.Tensor]:
+		"""
+		Perform a forward pass through the model and return the logits and labels.
+		"""
+		encodings: dict = {k: v.to(self.device) for k, v in batch.items()}
+		logits = self.model(**encodings)
+		if isinstance(logits, tuple):
+			logits = logits[0]
+			self.logger.warning(f"Model output is a tuple; using the first element as logits!")
+		return logits, batch["labels"]
+
 	def train(self, trainingDataLoader, validationDataLoader = None, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0):
 		"""
 		Train the model on the given data loader.
@@ -257,11 +269,8 @@ class HSSFLDON_ModelManager:
 				batch = {k: v.to(self.device) for k, v in batch.items()}
 
 				# Forward pass
-				logits = self.model(**batch)
-				if isinstance(logits, tuple):
-					logits = logits[0]
-					self.logger.warning(f"Model output is a tuple; using the first element as logits!")
-				loss = torch.nn.functional.cross_entropy(logits, batch["labels"])
+				logits, labels = self._forwardPass(batch)
+				loss = torch.nn.functional.cross_entropy(logits, labels)
 
 				# Backward pass
 				optimizer.zero_grad()
@@ -320,14 +329,32 @@ class HSSFLDON_ModelManager:
 			batch = {k: v.to(self.device) for k, v in batch.items()}
 
 			# Forward pass
-			logits = self.model(**batch)
-			if isinstance(logits, tuple):
-				logits = logits[0]
-				self.logger.warning(f"Model output is a tuple; using the first element as logits!")
-			loss = torch.nn.functional.cross_entropy(logits, batch["labels"])
+			logits, labels = self._forwardPass(batch)
+			loss = torch.nn.functional.cross_entropy(logits, labels)
+
+			# Track validation stats
+			valStats_loss += loss.item() * batch["labels"].size(0)
+			preds = torch.argmax(logits, dim=1)
+			valStats_correct += (preds == batch["labels"]).sum().item()
+			valStats_total += batch["labels"].size(0)
 
 		# Calculate average loss and accuracy
 		valStats_lossAverage = valStats_loss / max(1, valStats_total)
 		valStats_accuracy = valStats_correct / max(1, valStats_total)
 		self.logger.info(f"Model evaluation completed! Validation Loss: {valStats_lossAverage:.4f}, Validation Accuracy: {valStats_accuracy:.4f}")
 		return valStats_lossAverage, valStats_accuracy
+	
+	def predict(self, texts: list[str], batchSize: int = 16, maxLength: int = 256):
+
+		# Create holder for output
+		outputs = []
+
+		# Pocess in batches
+		with torch.no_grad():
+			for i in range(0, len(texts), batchSize):
+				batchTexts = texts[i:i+batchSize]
+				encodings = self.tokenizer(batchTexts, truncation=True, padding=True, max_length=maxLength, return_tensors="pt")
+				logits, _ = self._forwardPass(encodings)
+				preds = torch.argmax(logits, dim=1)
+				outputs.extend(preds.cpu().tolist())
+		return outputs
