@@ -226,3 +226,66 @@ class HSSFLDON_ModelManager:
 		Build a learning rate scheduler for the optimizer.
 		"""
 		return get_linear_schedule_with_warmup(optimizer, num_warmup_steps=numWarmupSteps, num_training_steps=numTrainingSteps)
+	
+	def train(self, trainingDataLoader, validationDataLoader = None, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0):
+		"""
+		Train the model on the given data loader.
+		"""
+		self.logger.info(f"Starting training for {epochs} epochs with learning rate {learningRate} and weight decay {weightDecay}!")
+
+		# Build optimizer and scheduler
+		optimizer = self.buildOptimizer(learningRate=learningRate, weightDecay=weightDecay)
+		scheduler = self.buildScheduler(optimizer, numWarmupSteps=0, numTrainingSteps=epochs * len(trainingDataLoader))
+
+		# Training loop
+		for epoch in range(1, epochs + 1):
+			self.logger.info(f"Epoch {epoch}/{epochs}")
+
+			# Set model into training mode and prepare trackers
+			self.model.train()
+			epochStats_loss = 0.0
+			epochStats_lossAverage = 0.0
+			epochStats_accuracy = 0.0
+			epochStats_correct = 0
+			epochStats_total = 0
+
+			# Iterate over training data
+			for batch in trainingDataLoader:
+
+				# Each batch is a dict of tensors with keys like "input_ids", "attention_mask", and "labels"
+				batch = {k: v.to(self.device) for k, v in batch.items()}
+
+				# Forward pass
+				logits = self.model(**batch)
+				if isinstance(logits, tuple):
+					logits = logits[0]
+					self.logger.warning(f"Model output is a tuple; using the first element as logits!")
+				loss = torch.nn.functional.cross_entropy(logits, batch["labels"])
+
+				# Backward pass
+				optimizer.zero_grad()
+				loss.backward()
+
+				# Gradient clipping
+				torch.nn.utils.clip_grad_norm_(self.getTrainableParameters(), max_norm=maxGradientNorm)
+
+				# Step optimizer and scheduler
+				optimizer.step()
+				scheduler.step()
+
+				# Track epoch stats
+				epochStats_loss += loss.item() * batch["labels"].size(0)
+				preds = torch.argmax(logits, dim=1)
+				epochStats_correct += (preds == batch["labels"]).sum().item()
+				epochStats_total += batch["labels"].size(0)
+
+			# Calculate average loss and accuracy for the epoch
+			epochStats_lossAverage = epochStats_loss / epochStats_total
+			epochStats_accuracy = epochStats_correct / epochStats_total
+
+			# Perform validation if given after each epoch
+			if validationDataLoader is not None:
+				validationLoss, validationAccuracy = self.evaluate(validationDataLoader)
+
+	def evaluate(self, dataLoader) -> tuple[float, float]:
+		return 0.0, 0.0
