@@ -228,16 +228,28 @@ class HSSFLDON_ModelManager:
 		"""
 		return get_linear_schedule_with_warmup(optimizer, num_warmup_steps=numWarmupSteps, num_training_steps=numTrainingSteps)
 	
-	def _forwardPass(self, batch: dict) -> Tuple[torch.Tensor, torch.Tensor]:
+	def _forwardPass(self, batch: dict) -> Tuple:
 		"""
 		Perform a forward pass through the model and return the logits and labels.
 		"""
-		encodings: dict = {k: v.to(self.device) for k, v in batch.items()}
+
+		# Get encodings for input
+		encodings: dict = {k: v.to(self.device) for k, v in batch.items() if k != "labels"}
+		
+		# Keep labels separate and move to device
+		labels = batch.get("labels", None)
+		if labels is not None:
+			labels = labels.to(self.device)
+			self.logger.debug(f"Labels found in batch; moved to device: {self.device}")
+		
+		# Forward pass through model
 		logits = self.model(**encodings)
 		if isinstance(logits, tuple):
 			logits = logits[0]
 			self.logger.warning(f"Model output is a tuple; using the first element as logits!")
-		return logits, batch["labels"]
+		
+		# Return logits and labels
+		return logits, labels
 
 	def train(self, trainingDataLoader, validationDataLoader = None, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0):
 		"""
