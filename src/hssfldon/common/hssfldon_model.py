@@ -238,8 +238,9 @@ class HSSFLDON_ModelManager:
 		scheduler = self.buildScheduler(optimizer, numWarmupSteps=0, numTrainingSteps=epochs * len(trainingDataLoader))
 
 		# Training loop
+		epochHistory = {}
 		for epoch in range(1, epochs + 1):
-			self.logger.info(f"Epoch {epoch}/{epochs}")
+			self.logger.debug(f"Epoch {epoch}/{epochs}")
 
 			# Set model into training mode and prepare trackers
 			self.model.train()
@@ -282,10 +283,51 @@ class HSSFLDON_ModelManager:
 			# Calculate average loss and accuracy for the epoch
 			epochStats_lossAverage = epochStats_loss / epochStats_total
 			epochStats_accuracy = epochStats_correct / epochStats_total
+			epochHistory[epoch] = {"train": {}, "validation": {}}
+			epochHistory[epoch]["train"]["loss"] = epochStats_lossAverage
+			epochHistory[epoch]["train"]["accuracy"] = epochStats_accuracy
 
 			# Perform validation if given after each epoch
-			if validationDataLoader is not None:
+			if validationDataLoader is None:
+				self.logger.debug(f"Epoch {epoch}/{epochs} completed! Train Loss: {epochStats_lossAverage:.4f}, Train Accuracy: {epochStats_accuracy:.4f}")
+			else:
 				validationLoss, validationAccuracy = self.evaluate(validationDataLoader)
+				epochHistory[epoch]["validation"]["loss"] = validationLoss
+				epochHistory[epoch]["validation"]["accuracy"] = validationAccuracy
+				self.logger.debug(f"Epoch {epoch}/{epochs} completed! Train Loss: {epochStats_lossAverage:.4f}, Train Accuracy: {epochStats_accuracy:.4f}, Validation Loss: {validationLoss:.4f}, Validation Accuracy: {validationAccuracy:.4f}")
 
-	def evaluate(self, dataLoader) -> tuple[float, float]:
-		return 0.0, 0.0
+		self.logger.info(f"Training completed for {epochs} epochs!")
+		return epochHistory
+
+	def evaluate(self, validationDataLoader) -> tuple[float, float]:
+		"""
+		Evaluate model on given data loader.
+		"""
+		self.logger.debug(f"Starting model evaluation!")
+
+		# Set model into training mode and prepare trackers
+		self.model.eval()
+		valStats_loss = 0.0
+		valStats_lossAverage = 0.0
+		valStats_accuracy = 0.0
+		valStats_correct = 0
+		valStats_total = 0
+
+		# Iterate over validation data
+		for batch in validationDataLoader:
+
+			# Each batch is a dict of tensors with keys like "input_ids", "attention_mask", and "labels"
+			batch = {k: v.to(self.device) for k, v in batch.items()}
+
+			# Forward pass
+			logits = self.model(**batch)
+			if isinstance(logits, tuple):
+				logits = logits[0]
+				self.logger.warning(f"Model output is a tuple; using the first element as logits!")
+			loss = torch.nn.functional.cross_entropy(logits, batch["labels"])
+
+		# Calculate average loss and accuracy
+		valStats_lossAverage = valStats_loss / max(1, valStats_total)
+		valStats_accuracy = valStats_correct / max(1, valStats_total)
+		self.logger.info(f"Model evaluation completed! Validation Loss: {valStats_lossAverage:.4f}, Validation Accuracy: {valStats_accuracy:.4f}")
+		return valStats_lossAverage, valStats_accuracy
