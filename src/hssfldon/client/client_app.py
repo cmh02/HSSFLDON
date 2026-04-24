@@ -13,10 +13,7 @@
 # Library Imports
 import os
 import gc
-import ast
-import json
 import time
-import unsloth
 import torch
 import requests
 from trl import SFTTrainer, SFTConfig
@@ -127,23 +124,7 @@ class HSSFLDON_ClientApplication:
 			self.logger.error(f"Error loading training data: {e}")
 			return
 
-		# tokenizer = modelManager.tokenizer
-		# print("Chat template:", tokenizer.chat_template)
-		# print("EOS token:", tokenizer.eos_token)
-		# print("PAD token:", tokenizer.pad_token)
-
-		# # Try manually
-		# sample = trainDataset[49]
-		# result = tokenizer.apply_chat_template(
-		# 	sample["messages"],
-		# 	tokenize=False,  # Get the string first
-		# 	add_generation_prompt=False
-		# )
-		# print("Rendered string:", result[:200])
-		# print("Rendered length:", len(result))
-
 		# Configure training arguments and train
-		# torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = False
 		try:
 			trainingArgs = SFTConfig(
 
@@ -157,7 +138,7 @@ class HSSFLDON_ClientApplication:
 
 				# Datatype
 				# fp16=False,                         
-				bf16=True,
+				# bf16=True,
 
 				# Specify LR and other optimizer params
 				learning_rate=5e-07,
@@ -170,6 +151,9 @@ class HSSFLDON_ClientApplication:
 				save_strategy="no",
 				logging_steps=10,
 
+				# Specify which field in dataset is input for model
+				dataset_text_field="text",
+
 				# Max sequence length for qwen with our dataset
 				max_length=maxTokenLength,
 
@@ -177,10 +161,7 @@ class HSSFLDON_ClientApplication:
 				eos_token="<|im_end|>",
 
 				# Disable progress bars to reduce clutter
-				disable_tqdm=True,
-
-				# Specify column for text
-				dataset_text_field="text"
+				disable_tqdm=True
 
 			)
 			trainer = SFTTrainer(
@@ -191,7 +172,6 @@ class HSSFLDON_ClientApplication:
 				callbacks=[HSSFLDON_TrainerCallbackLogger(logger=self.logger)]
 			)
 			trainer.train()
-			
 		except Exception as e:
 			self.logger.error(f"Error during training: {e}")
 			return
@@ -244,10 +224,6 @@ class HSSFLDON_ClientApplication:
 
 		# Rename the target column to "text"
 		hf_dataset = hf_dataset.rename_column("slm_prompt_labeled", "text")
-
-		# Remove all columns except for 'messages'
-		# columns_to_remove = [col for col in hf_dataset.column_names if col != "messages"]
-		# hf_dataset = hf_dataset.remove_columns(columns_to_remove)
 
 		# Log and return
 		self.logger.info(f"Loaded dataset with {len(hf_dataset)} examples from `{dataPath}`!")

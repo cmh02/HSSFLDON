@@ -7,7 +7,6 @@
 ### Library Imports
 import os
 import copy
-import unsloth
 import torch
 from dotenv import load_dotenv
 from huggingface_hub import login
@@ -51,44 +50,38 @@ class HSSFLDON_ModelManager:
 
 		# Setup base model
 		self.device = "cuda" if torch.cuda.is_available() else "cpu"
-		# self.base_model = AutoModelForCausalLM.from_pretrained(
-		# 	self.modelId, 
-		# 	dtype=torch.bfloat16,
-		# 	device_map=self.device
-		# )
-
-		# # Setup tokenizer
-		# self.tokenizer = AutoTokenizer.from_pretrained(
-		# 	pretrained_model_name_or_path=self.modelId,
-		# 	model_max_length=self.maxTokenLength,
-		# )
-
-		self.base_model, self.tokenizer = unsloth.FastLanguageModel.from_pretrained(
-			model_name=self.modelId,
-			max_seq_length=self.maxTokenLength,
-			load_in_4bit=True
+		self.base_model = AutoModelForCausalLM.from_pretrained(
+			self.modelId, 
+			# dtype=torch.bfloat16,
+			device_map=self.device
 		)
 
-		# # Fix eos/pad token for qwen
-		# desired = "<|im_end|>"
-		# if self.tokenizer.eos_token != desired:
+		# Setup tokenizer
+		self.tokenizer = AutoTokenizer.from_pretrained(
+			pretrained_model_name_or_path=self.modelId,
+			model_max_length=self.maxTokenLength,
+		)
 
-		# 	# Add the token if it doesn't exist
-		# 	tok_id = self.tokenizer.convert_tokens_to_ids(desired)
-		# 	if tok_id == self.tokenizer.unk_token_id:
-		# 		self.tokenizer.add_special_tokens({"eos_token": desired, "pad_token": desired})
-		# 		self.base_model.resize_token_embeddings(len(self.tokenizer))
-		# 		self.logger.debug(f"Desired EOS/PAD token did not exist, added `{desired}` as special token and resized model embeddings successfully!")
+		# Fix eos/pad token for qwen
+		desired = "<|im_end|>"
+		if self.tokenizer.eos_token != desired:
 
-		# 	# Set token if it does exist
-		# 	else:
-		# 		self.tokenizer.eos_token = desired
-		# 		self.tokenizer.pad_token = desired
-		# 		self.logger.debug(f"Desired EOS/PAD token existed, Tokenizer EOS and PAD tokens set to `{desired}` successfully!")
+			# Add the token if it doesn't exist
+			tok_id = self.tokenizer.convert_tokens_to_ids(desired)
+			if tok_id == self.tokenizer.unk_token_id:
+				self.tokenizer.add_special_tokens({"eos_token": desired, "pad_token": desired})
+				self.base_model.resize_token_embeddings(len(self.tokenizer))
+				self.logger.debug(f"Desired EOS/PAD token did not exist, added `{desired}` as special token and resized model embeddings successfully!")
 
-		# # Match config w tokenizer
-		# self.base_model.config.eos_token_id = self.tokenizer.eos_token_id
-		# self.base_model.config.pad_token_id = self.tokenizer.pad_token_id
+			# Set token if it does exist
+			else:
+				self.tokenizer.eos_token = desired
+				self.tokenizer.pad_token = desired
+				self.logger.debug(f"Desired EOS/PAD token existed, Tokenizer EOS and PAD tokens set to `{desired}` successfully!")
+
+		# Match config w tokenizer
+		self.base_model.config.eos_token_id = self.tokenizer.eos_token_id
+		self.base_model.config.pad_token_id = self.tokenizer.pad_token_id
 
 		self.lora_config = LoraConfig(
 			r=self.loraRank, 
@@ -108,15 +101,7 @@ class HSSFLDON_ModelManager:
 			An instance of the model.
 		"""
 		fresh_base = copy.deepcopy(self.base_model)
-		# return unsloth.FastLanguageModel.get_peft_model(fresh_base, self.lora_config)
-		return unsloth.FastLanguageModel.get_peft_model(
-			model=fresh_base,
-			r=self.lora_config.r,
-			lora_alpha=self.lora_config.lora_alpha,
-			target_modules=self.lora_config.target_modules,
-			lora_dropout=self.lora_config.lora_dropout,
-			bias=self.lora_config.bias,
-		)
+		return get_peft_model(fresh_base, self.lora_config)
 
 	def loadAdapterFromFile(self, filePath: str) -> PeftModel:
 		"""

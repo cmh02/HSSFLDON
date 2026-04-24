@@ -1,12 +1,11 @@
 ---
-base_model: unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit
+base_model: Qwen/Qwen2.5-1.5B
 library_name: peft
 pipeline_tag: text-generation
 tags:
-- base_model:adapter:unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit
+- base_model:adapter:Qwen/Qwen2.5-1.5B
 - lora
 - transformers
-- unsloth
 ---
 
 # Model Card for Model ID
