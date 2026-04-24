@@ -128,7 +128,7 @@ class HSSFLDON_ModelManager:
 		"""
 		model.save_pretrained(save_directory=filePath)
 
-def aggregateAdapters(self, peftModel: PeftModel, clientPaths: list[str], savePath: str):
+	def aggregateAdapters(self, peftModel: PeftModel, clientPaths: list[str], savePath: str):
 		"""
 		Uses FedAvg to aggregate client adapters into new global adapter.
 		"""
@@ -163,3 +163,20 @@ def aggregateAdapters(self, peftModel: PeftModel, clientPaths: list[str], savePa
 
 		# Log
 		self.logger.info(f"Aggregated {len(clientPaths)} client adapters into new global adapter and saved to `{savePath}` successfully!")
+
+	def promptModel(self, peftModel: PeftModel, prompt: str, maxTokens: int = 50) -> str:
+		"""
+		Prompt the model with a given prompt and return the generated response.
+
+		Args:
+			peftModel: The model instance to prompt.
+			prompt: The prompt string to input to the model.
+			maxTokens: The maximum number of tokens to generate in the response.
+		
+		Returns:
+			The generated response string from the model.
+		"""
+		inputIds = self.tokenizer(prompt, return_tensors="pt").input_ids.to(self.device)
+		outputIds = peftModel.generate(inputIds, max_new_tokens=maxTokens)
+		response = self.tokenizer.decode(outputIds[0], skip_special_tokens=True)
+		return response

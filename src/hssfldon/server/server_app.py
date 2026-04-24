@@ -20,6 +20,7 @@ import torch
 import uvicorn
 import requests
 import threading
+from datasets import load_dataset, Dataset
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from safetensors.torch import save_file, load_file
@@ -201,3 +202,16 @@ class HSSFLDON_ServerApplication:
 		del self.globalAdapter
 		del self.modelManager
 		torch.cuda.empty_cache()
+
+	def getData(self) -> Dataset:
+		"""
+		Get the server's unlabeled dataset for distribution to clients.
+		"""
+		self.logger.info(f"Loading server dataset from {self.dataFilePath}!")
+		dataset: Dataset = load_dataset("parquet", data_files=self.dataFilePath, split="train")
+		if len(dataset) == 0:
+			self.logger.error(f"Loaded dataset is empty from path: {self.dataFilePath}!")
+			raise ValueError(f"Dataset is empty at path: {self.dataFilePath}!")
+		
+		return dataset
+		
