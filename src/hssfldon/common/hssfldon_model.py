@@ -208,3 +208,21 @@ class HSSFLDON_ModelManager:
 			self.logger.info(f"Classification head saved to {self.modelFile_head}")
 		except Exception as e:
 			self.logger.error(f"Failed to save classification head to {self.modelFile_head}: {e}")
+
+	def getTrainableParameters(self):
+		"""
+		Get the trainable parameters of the model (i.e. the classification head).
+		"""
+		return self.component_head.parameters()
+	
+	def buildOptimizer(self, learningRate: float = 1e-4, weightDecay: float = 0.01):
+		"""
+		Build an optimizer for the trainable parameters of the model.
+		"""
+		return torch.optim.AdamW(self.getTrainableParameters(), lr=learningRate, weight_decay=weightDecay)
+	
+	def buildScheduler(self, optimizer, numWarmupSteps: int = 0, numTrainingSteps: int = 1000):
+		"""
+		Build a learning rate scheduler for the optimizer.
+		"""
+		return get_linear_schedule_with_warmup(optimizer, num_warmup_steps=numWarmupSteps, num_training_steps=numTrainingSteps)
