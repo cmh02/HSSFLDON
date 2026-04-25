@@ -98,15 +98,15 @@ class HSSFLDON_ModelManager:
 				problem_type="multi_label_classification"
 			)
 
-		# Determine available device and move model if needed
-		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-		base_model.to(self.device)
-		self.logger.info(f"Base model loaded and moved to device: {self.device}")
-
 		# Freeze parameters of the base model
 		for param in base_model.parameters():
 			param.requires_grad = False
 		self.logger.info(f"Base model parameters frozen. Only the classification head will be trainable.")
+
+		# Determine available device and move model if needed
+		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+		base_model.to(self.device)
+		self.logger.info(f"Base model loaded and moved to device: {self.device}")
 
 		# Return
 		return base_model
