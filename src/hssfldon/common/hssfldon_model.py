@@ -203,8 +203,14 @@ class HSSFLDON_ModelManager:
 		else:
 			self.logger.info(f"Classification head not found locally, using new head!")
 
+		# Determine data type of base model and convert to same dtype if needed
+		try:
+			base_dtype = next(self.component_base.parameters()).dtype
+		except StopIteration:
+			base_dtype = torch.float16
+
 		# Send to device
-		head.to(self.device)
+		head.to(self.device, dtype=base_dtype)
 
 		# Make sure head is trainable
 		for param in head.parameters():
