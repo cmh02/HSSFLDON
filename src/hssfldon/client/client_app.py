@@ -96,8 +96,8 @@ class HSSFLDON_ClientApplication:
 		"""
 		self.logger.info(f"Starting passive learning process!")
 
-		# Create new model manager (model) for this round
-		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"client_{self.client_id}")
+		# Create new model manager (model) for this round based on global head
+		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
 
 		# Get dataset for this client
 		dataset: Dataset | None = HSSFLDON_DataLoader().loadDataset(path=self.dataPath, split="train")
