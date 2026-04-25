@@ -49,6 +49,17 @@ class HSSFLDON_DataLoader:
 			self.logger.warning(f"Loaded dataset from path `{path}` is empty!")
 			return None
 		
+		# Relabel 'classifications' to 'labels' for consistency
+		if "classifications" in dataset.column_names:
+			dataset = dataset.rename_column("classifications", "labels")
+
+		# Only keep 'text' and 'labels' columns for training
+		columns_to_keep = ["text", "labels"]
+		columns_to_remove = [col for col in dataset.column_names if col not in columns_to_keep]
+		if columns_to_remove:
+			dataset = dataset.remove_columns(columns_to_remove)
+			self.logger.info(f"Removed unnecessary columns from dataset: {columns_to_remove}")
+		
 		# Log and return
 		self.logger.info(f"Loaded dataset from path `{path}` with {len(dataset)} samples!")
 		return dataset
