@@ -5,6 +5,7 @@
 '''
 
 # Library Imports
+import numpy as np
 from dotenv import load_dotenv
 from datasets import load_dataset, Dataset #type: ignore 
 
@@ -51,7 +52,10 @@ class HSSFLDON_DataLoader:
 		
 		# Relabel 'classifications' to 'labels' for consistency
 		if "classifications" in dataset.column_names:
-			dataset = dataset.rename_column("classifications", "labels")
+			dataset = dataset.rename_column("classifications", "labels")\
+			
+		# Convert labels to float16 for mixed precision training
+		dataset = dataset.map(self._castLabelsToFloat16, batched=False)
 
 		# Only keep 'text' and 'labels' columns for training
 		columns_to_keep = ["text", "labels"]
@@ -63,3 +67,20 @@ class HSSFLDON_DataLoader:
 		# Log and return
 		self.logger.info(f"Loaded dataset from path `{path}` with {len(dataset)} samples!")
 		return dataset
+	
+	@staticmethod
+	def _castLabelsToFloat16(example):
+		"""
+		Cast the labels to float16 for compatibility with mixed precision training.
+
+		Args:
+			example (dict): The input example containing the 'labels' field.
+
+		Returns:
+			dict: The example with 'labels' cast to float16.
+		"""
+		labels = example.get("labels")
+		if labels is None:
+			return {**example, "labels": None}
+		convertedArray = np.asarray(labels, dtype=np.float16)
+		return {**example, "labels": convertedArray.tolist()}
