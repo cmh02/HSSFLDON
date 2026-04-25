@@ -294,11 +294,12 @@ class HSSFLDON_ModelManager:
 			epochStats_total = 0
 
 			# Iterate over training data
+			lossFunction = torch.nn.BCEWithLogitsLoss()
 			for batch in trainingDataLoader:
 
 				# Forward pass
 				logits, labels = self._forwardPass(batch)
-				loss = torch.nn.functional.cross_entropy(logits, labels)
+				loss = lossFunction(logits, labels)
 
 				# Backward pass
 				optimizer.zero_grad()
@@ -351,17 +352,19 @@ class HSSFLDON_ModelManager:
 		valStats_total = 0
 
 		# Iterate over validation data
-		for batch in validationDataLoader:
+		lossFunction = torch.nn.BCEWithLogitsLoss()
+		with torch.no_grad():
+			for batch in validationDataLoader:
 
-			# Forward pass
-			logits, labels = self._forwardPass(batch)
-			loss = torch.nn.functional.cross_entropy(logits, labels)
+				# Forward pass
+				logits, labels = self._forwardPass(batch)
+				loss = lossFunction(logits, labels)
 
-			# Track validation stats
-			valStats_loss += loss.item() * batch["labels"].size(0)
-			preds = torch.argmax(logits, dim=1)
-			valStats_correct += (preds == batch["labels"]).sum().item()
-			valStats_total += batch["labels"].size(0)
+				# Track validation stats
+				valStats_loss += loss.item() * batch["labels"].size(0)
+				preds = torch.argmax(logits, dim=1)
+				valStats_correct += (preds == batch["labels"]).sum().item()
+				valStats_total += batch["labels"].size(0)
 
 		# Calculate average loss and accuracy
 		valStats_lossAverage = valStats_loss / max(1, valStats_total)
