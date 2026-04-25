@@ -21,6 +21,7 @@ from transformers import TrainingArguments
 from datasets import load_dataset, Dataset
 
 # Project Imports
+from hssfldon.common.hssfldon_data import HSSFLDON_DataLoader
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger, HSSFLDON_TrainerCallbackLogger
 from hssfldon.common.hssfldon_model import HSSFLDON_ModelManager
 from hssfldon.common.hssfldon_enum import HSSFLDON_ClientState, HSSFLDON_ClientTask
@@ -89,12 +90,23 @@ class HSSFLDON_ClientApplication:
 				time.sleep(60)
 				continue
 
-
 	def doPassiveLearning(self):
 		"""
 		Perform the passive learning process for the client.
 		"""
 		self.logger.info(f"Starting passive learning process!")
+
+		# Create new model manager (model) for this round
+		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"client_{self.client_id}")
+
+		# Get dataset for this client
+		dataset: Dataset | None = HSSFLDON_DataLoader().loadDataset(path=self.dataPath, split="train")
+		if dataset is None:
+			self.logger.error(f"Failed to load dataset for passive learning. Aborting this round of passive learning!")
+			return
+
+		# Tokenize dataset and prepare dataloader
+		
 
 	def checkServerHealth(self) -> bool:
 		"""

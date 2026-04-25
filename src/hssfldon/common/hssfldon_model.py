@@ -35,7 +35,7 @@ class HSSFLDON_ModelManager:
 	"""
 	The main model class for HSSFLDON.
 	"""
-	def __init__(self):
+	def __init__(self, customHeadIdentifier: str | None = None):
 
 		# Parse dotenv for env variables
 		envStatus: bool = load_dotenv()
@@ -64,10 +64,13 @@ class HSSFLDON_ModelManager:
 			self.logger.warning(f"No Hugging Face access token provided. If the model `{self.modelId}` is private, model loading will fail!")
 
 		# Initialize model, tokenizer, and classification head
-		self.component_base = self.loadBaseModel()
-		self.component_head = self.loadClassificationHead()
+		self.component_base = self.loadBaseModel(name=f"pytorch_model.bin")
+		if customHeadIdentifier is None:
+			customHeadIdentifier = "default"
+			self.logger.info(f"No custom head identifier provided; using default: `{customHeadIdentifier}`")
+		self.component_head = self.loadClassificationHead(name=f"classification_head_{customHeadIdentifier}.pt")
 		self.model = HSSFLDON_ClassifierHead(base=self.component_base, head=self.component_head)
-		self.tokenizer = self.loadTokenizer()
+		self.tokenizer = self.loadTokenizer(name=f"tokenizer.pt")
 
 	def loadBaseModel(self, name: str = "pytorch_model.bin"):
 		"""
