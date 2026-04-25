@@ -306,7 +306,6 @@ class HSSFLDON_ModelManager:
 		# Training loop
 		epochHistory = {}
 		for epoch in range(1, epochs + 1):
-			self.logger.debug(f"Epoch {epoch}/{epochs}")
 
 			# Set model into training mode and prepare trackers
 			self.model.train()
@@ -318,7 +317,8 @@ class HSSFLDON_ModelManager:
 
 			# Iterate over training data
 			lossFunction = torch.nn.BCEWithLogitsLoss()
-			for batch in trainingDataLoader:
+			for i, batch in enumerate(trainingDataLoader, 1):
+				self.logger.debug(f"Processing batch {i} / {len(trainingDataLoader)} for epoch {epoch}/{epochs}!")
 
 				# Forward pass
 				logits, labels = self._forwardPass(batch)
@@ -326,10 +326,8 @@ class HSSFLDON_ModelManager:
 				# Ensure labels have same dtype and device as logits for loss calculation
 				if isinstance(labels, torch.Tensor):
 					labels = labels.to(dtype=logits.dtype, device=logits.device)
-					self.logger.debug(f"Labels are already Torch Tensor; converted to dtype {logits.dtype} and moved to device {logits.device} for loss calculation!")
 				else:
 					labels = torch.tensor(labels, dtype=logits.dtype, device=logits.device)
-					self.logger.debug(f"Labels converted to Torch Tensor with dtype {logits.dtype} and moved to device {logits.device} for loss calculation!")
 
 				# Calculate loss
 				loss = lossFunction(logits, labels)
