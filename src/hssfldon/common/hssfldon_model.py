@@ -12,7 +12,7 @@ from typing import Tuple, Any
 from dotenv import load_dotenv
 from huggingface_hub import login
 from torch.utils.data import DataLoader, Dataset
-from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warmup
+from transformers import AutoModel, AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
@@ -88,10 +88,14 @@ class HSSFLDON_ModelManager:
 		# Check if the model has been saved locally
 		if os.path.isfile(modelFile_base):
 			self.logger.info(f"Loading base model from local path: {self.modelPath_base}")
-			base_model = AutoModel.from_config(modelFile_base)
+			base_model = AutoModelForSequenceClassification.from_config(modelFile_base)
 		else:
 			self.logger.info(f"Base model not found locally. Loading from Hugging Face Hub: {self.modelId}")
-			base_model = AutoModel.from_pretrained(self.modelId)
+			base_model = AutoModelForSequenceClassification.from_pretrained(
+				pretrained_model_name_or_path=self.modelId, 
+				num_labels=self.modelNClasses,
+				problem_type="multi_label_classification"
+			)
 
 		# Determine available device and move model if needed
 		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
