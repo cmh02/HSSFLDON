@@ -86,7 +86,7 @@ class HSSFLDON_ModelManager:
 		modelFile_base: str = os.path.join(self.modelPath_base, name)
 		
 		# Check if the model has been saved locally
-		if os.path.exists(self.modelPath_base):
+		if os.path.isfile(modelFile_base):
 			self.logger.info(f"Loading base model from local path: {self.modelPath_base}")
 			base_model = AutoModel.from_config(modelFile_base)
 		else:
