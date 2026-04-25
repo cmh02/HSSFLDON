@@ -89,7 +89,7 @@ class HSSFLDON_ModelManager:
 		# Check if the model has been saved locally
 		if os.path.isfile(modelFile_base):
 			self.logger.info(f"Loading base model from local path: {self.modelPath_base}")
-			base_model = AutoModelForSequenceClassification.from_config(modelFile_base)
+			base_model = AutoModelForSequenceClassification.from_pretrained(modelFile_base)
 		else:
 			self.logger.info(f"Base model not found locally. Loading from Hugging Face Hub: {self.modelId}")
 			base_model = AutoModelForSequenceClassification.from_pretrained(
