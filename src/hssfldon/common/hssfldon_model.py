@@ -8,6 +8,7 @@
 import os
 import copy
 import torch
+import torch.nn as nn
 from typing import Tuple, Any
 from dotenv import load_dotenv
 from huggingface_hub import login
@@ -193,7 +194,13 @@ class HSSFLDON_ModelManager:
 		modelFile_head: str = os.path.join(self.modelPath_head, name)
 		
 		# Create classification head
-		head = torch.nn.Linear(self.component_base.config.hidden_size, self.modelNClasses)
+		head = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Linear(self.component_base.config.hidden_size, self.component_base.config.hidden_size // 2),
+            nn.GELU(),
+            nn.Dropout(0.2),
+            nn.Linear(self.component_base.config.hidden_size // 2, self.modelNClasses)
+        )
 
 		# Check if saved locally, and if so, load state dict
 		if os.path.exists(modelFile_head):
@@ -212,6 +219,9 @@ class HSSFLDON_ModelManager:
 			base_dtype = next(self.component_base.parameters()).dtype
 		except StopIteration:
 			base_dtype = torch.float16
+
+		# Save to class
+		self.classification_head = head
 
 		# Send to device
 		head.to(self.device, dtype=base_dtype)
