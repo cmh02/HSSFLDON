@@ -52,7 +52,7 @@ class HSSFLDON_ServerApplication:
 		self.clients: list[int] = []
 		self.clientTasks: dict[int, HSSFLDON_ClientTask] = {}
 		self.clientUpdateStatus: dict[int, bool] = {}
-		self.clientAdapterPathCache: dict[int, str | None] = {}
+		self.clientHeadPathCache: dict[int, str | None] = {}
 
 		# Setup API
 		self.api_host = os.getenv("HSSFLDON_SERVER_HOST", "127.0.0.1")
@@ -76,13 +76,11 @@ class HSSFLDON_ServerApplication:
 		self.enterState(HSSFLDON_ServerState.IDLE)
 
 		# Setup model
-		self.adaptersDirectory = os.getenv("HSSFLDON_MODEL_ADAPTERS_DIRECTORY", "adapters")
-		self.adaptersGlobalName = os.getenv("HSSFLDON_MODEL_ADAPTERS_GLOBAL", "global")
-		self.adaptersGlobalFullPath = os.path.join(self.adaptersDirectory, self.adaptersGlobalName)
-		self.modelName: str | None = os.getenv("HSSFLDON_HF_MODEL", None)
-		self.logger.debug(f"Global Adapter Path: {self.adaptersGlobalFullPath}")
-		self.logger.debug(f"Model Name: {self.modelName}")
-		self.initializeModel()
+		self.modelName: str = os.getenv("HSSFLDON_MODEL_NAME", "bert-base-uncased")
+		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
+		modelManager.saveBaseModel(name = "pytorch_model.bin")
+		modelManager.saveTokenizer(name = "tokenizer.pt")
+		modelManager.saveClassificationHead(name = "classification_head_global.pt")
 
 		# Setup data directory for server unlabeled data
 		self.dataDirectory: str = os.getenv("HSSFLDON_CLIENT_DATA_DIRECTORY", "data")
@@ -123,24 +121,20 @@ class HSSFLDON_ServerApplication:
 				self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
 				self.logger.debug(f"Received update from client {clientId} and set to standby!")
 
-			# Passive Aggregation: Aggregate client updates into global model for passive learning
-			self.enterState(HSSFLDON_ServerState.AGGREGATING)
-			clientAdaptersToMerge: list[str] = []
-			for clientId in self.clients:
-				clientAdapterPath: str | None = self.clientAdapterPathCache[clientId]
-				if clientAdapterPath is None:
-					self.logger.warning(f"No adapter path found for client {clientId} during aggregation! Skipping client update.")
-					continue
-				clientAdaptersToMerge.append(clientAdapterPath)
-			if len(clientAdaptersToMerge) > 0:
-				self.modelManager.aggregateAdapters(
-					peftModel=self.globalAdapter,
-					clientPaths=clientAdaptersToMerge,
-					savePath=self.adaptersGlobalFullPath
-				)
-				self.logger.info(f"Completed aggregation for iteration {iteration+1} passive learning!")
-			else:
-				self.logger.warning(f"No client adapters found to aggregate for iteration {iteration+1} passive learning! Skipping aggregation step.")
+			# # Passive Aggregation: Aggregate client updates into global model for passive learning
+			# self.enterState(HSSFLDON_ServerState.AGGREGATING)
+			# clientAdaptersToMerge: list[str] = []
+			# for clientId in self.clients:
+			# 	clientAdapterPath: str | None = self.clientAdapterPathCache[clientId]
+			# 	if clientAdapterPath is None:
+			# 		self.logger.warning(f"No adapter path found for client {clientId} during aggregation! Skipping client update.")
+			# 		continue
+			# 	clientAdaptersToMerge.append(clientAdapterPath)
+			# if len(clientAdaptersToMerge) > 0:
+			# 	#TODO: aggregate model heads
+			# 	self.logger.info(f"Completed aggregation for iteration {iteration+1} passive learning!")
+			# else:
+			# 	self.logger.warning(f"No client adapters found to aggregate for iteration {iteration+1} passive learning! Skipping aggregation step.")
 
 	def launchApi(self) -> bool:
 		"""
@@ -183,35 +177,4 @@ class HSSFLDON_ServerApplication:
 		self.clients.append(clientId)
 		self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
 		self.clientUpdateStatus[clientId] = False
-		self.clientAdapterPathCache[clientId] = None
-
-	def initializeModel(self):
-		"""
-		Initialize the model manager and load the base model.
-		"""
-		self.logger.info(f"Initializing model manager and loading base model!")
-		self.modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(modelId=self.modelName)
-		self.globalAdapter: PeftModel = self.modelManager.getFreshModel()
-		self.modelManager.saveAdapterToFile(self.globalAdapter, self.adaptersGlobalFullPath)
-
-	def shutdownModel(self):
-		"""
-		Clean up model resources.
-		"""
-		self.logger.info(f"Shutting down model and cleaning up resources!")
-		del self.globalAdapter
-		del self.modelManager
-		torch.cuda.empty_cache()
-
-	def getData(self) -> Dataset:
-		"""
-		Get the server's unlabeled dataset for distribution to clients.
-		"""
-		self.logger.info(f"Loading server dataset from {self.dataFilePath}!")
-		dataset: Dataset = load_dataset("parquet", data_files=self.dataFilePath, split="train")
-		if len(dataset) == 0:
-			self.logger.error(f"Loaded dataset is empty from path: {self.dataFilePath}!")
-			raise ValueError(f"Dataset is empty at path: {self.dataFilePath}!")
-		
-		return dataset
-		
+		self.clientHeadPathCache[clientId] = None
