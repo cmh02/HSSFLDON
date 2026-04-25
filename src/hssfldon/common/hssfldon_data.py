@@ -54,8 +54,8 @@ class HSSFLDON_DataLoader:
 		if "classifications" in dataset.column_names:
 			dataset = dataset.rename_column("classifications", "labels")\
 			
-		# Convert labels to float16 for mixed precision training
-		dataset = dataset.map(self._castLabelsToFloat16, batched=False)
+		# Convert labels to float32 for mixed precision training
+		dataset = dataset.map(self._castLabelsToDataType, batched=False, fn_kwargs={"dType": np.float32})
 
 		# Only keep 'text' and 'labels' columns for training
 		columns_to_keep = ["text", "labels"]
@@ -69,18 +69,19 @@ class HSSFLDON_DataLoader:
 		return dataset
 	
 	@staticmethod
-	def _castLabelsToFloat16(example):
+	def _castLabelsToDataType(example, dType: type = np.float32):
 		"""
-		Cast the labels to float16 for compatibility with mixed precision training.
+		Cast the labels to the specified data type for compatibility with mixed precision training.
 
 		Args:
 			example (dict): The input example containing the 'labels' field.
+			dType (type): The data type to cast the labels to.
 
 		Returns:
-			dict: The example with 'labels' cast to float16.
+			dict: The example with 'labels' cast to the specified data type.
 		"""
 		labels = example.get("labels")
 		if labels is None:
 			return {**example, "labels": None}
-		convertedArray = np.asarray(labels, dtype=np.float16)
+		convertedArray = np.asarray(labels, dtype=dType)
 		return {**example, "labels": convertedArray.tolist()}
