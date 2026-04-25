@@ -106,7 +106,33 @@ class HSSFLDON_ClientApplication:
 			return
 
 		# Tokenize dataset and prepare dataloader
-		
+		dataloader: torch.utils.data.DataLoader = modelManager.tokenize_and_create_dataloader(
+			texts = dataset["text"],
+			labels = dataset["labels"]
+		)
+
+		# Train model on dataset
+		epochTrainingHistory = modelManager.train(
+			trainingDataLoader = dataloader,
+			validationDataLoader = None,
+			epochs = 1,
+			learningRate = 0.0001,
+			weightDecay = 0.01,
+			maxGradientNorm = 1 
+		)
+
+		# Log training history
+		self.logger.debug(f"Passive learning training history for this round: {epochTrainingHistory}")
+
+		# Save classifier head and submit update to server
+		modelManager.saveClassificationHead(name=f"client_{self.client_id}_head.pt")
+		self.submitUpdateToServer(headPath=f"client_{self.client_id}_head.pt")
+
+		# Final info log and cleanup
+		self.logger.info(f"Completed passive learning process for this round!")
+		del modelManager
+		gc.collect()
+		torch.cuda.empty_cache()
 
 	def checkServerHealth(self) -> bool:
 		"""
@@ -183,19 +209,19 @@ class HSSFLDON_ClientApplication:
 			self.logger.error(f"An exception occurred while fetching next task: {e}")
 		return HSSFLDON_ClientTask.STANDBY
 	
-	def submitUpdateToServer(self, adapterPath: str):
+	def submitUpdateToServer(self, headPath: str):
 		"""
-		Submit the updated local adapter to the server.
+		Submit the updated local head to the server.
 
 		Args:
-			adapterPath: The file path to the updated local adapter.
+			headPath: The file path to the updated local head.
 		"""
-		self.logger.debug(f"Submitting updated adapter to server from path: {adapterPath}")
+		self.logger.debug(f"Submitting updated head to server from path: {headPath}")
 		
 		# Build payload
 		payload = {
 			"client_id": self.client_id,
-			"adapter_path": adapterPath
+			"head_path": headPath
 		}
 		headers = {"Content-Type": "application/json"}
 
