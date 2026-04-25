@@ -72,6 +72,11 @@ class HSSFLDON_ModelManager:
 		self.model = HSSFLDON_ClassifierHead(base=self.component_base, head=self.component_head)
 		self.tokenizer = self.loadTokenizer(name=f"tokenizer.pt")
 
+		# Save for reuse
+		self.saveClassificationHead(name=f"classification_head_{customHeadIdentifier}.pt")
+		self.saveBaseModel(name=f"pytorch_model.bin")
+		self.saveTokenizer(name=f"tokenizer.pt")
+
 	def loadBaseModel(self, name: str = "pytorch_model.bin"):
 		"""
 		Load the (frozen) base model from file or HF if needed.
