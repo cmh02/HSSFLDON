@@ -345,10 +345,13 @@ class HSSFLDON_ModelManager:
 				optimizer.step()
 				scheduler.step()
 
+				# Calculate probabilities and predictions
+				probabilities = torch.sigmoid(logits)
+				predictions = (probabilities > 0.5).to(batch["labels"].dtype)
+
 				# Track epoch stats
 				epochStats_loss += loss.item() * batch["labels"].size(0)
-				preds = torch.argmax(logits, dim=1)
-				epochStats_correct += (preds == batch["labels"]).sum().item()
+				epochStats_correct += (predictions == batch["labels"]).sum().item()
 				epochStats_total += batch["labels"].size(0)
 
 			# Calculate average loss and accuracy for the epoch
@@ -393,10 +396,13 @@ class HSSFLDON_ModelManager:
 				logits, labels = self._forwardPass(batch)
 				loss = lossFunction(logits, labels)
 
+				# Calculate probabilities and predictions
+				probabilities = torch.sigmoid(logits)
+				predictions = (probabilities > 0.5).to(batch["labels"].dtype)
+
 				# Track validation stats
 				valStats_loss += loss.item() * batch["labels"].size(0)
-				preds = torch.argmax(logits, dim=1)
-				valStats_correct += (preds == batch["labels"]).sum().item()
+				valStats_correct += (predictions == batch["labels"]).sum().item()
 				valStats_total += batch["labels"].size(0)
 
 		# Calculate average loss and accuracy
@@ -416,8 +422,9 @@ class HSSFLDON_ModelManager:
 				batchTexts = texts[i:i+batchSize]
 				encodings = self.tokenizer(batchTexts, truncation=True, padding=True, max_length=maxLength, return_tensors="pt")
 				logits, _ = self._forwardPass(encodings)
-				preds = torch.argmax(logits, dim=1)
-				outputs.extend(preds.cpu().tolist())
+				probabilities = torch.sigmoid(logits)
+				predictions = (probabilities > 0.5)
+				outputs.extend(predictions.cpu().tolist())
 		return outputs
 	
 	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 16, max_length: int = 256, shuffle: bool = True):
