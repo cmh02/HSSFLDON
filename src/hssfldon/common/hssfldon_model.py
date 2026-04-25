@@ -88,7 +88,7 @@ class HSSFLDON_ModelManager:
 		# Check if the model has been saved locally
 		if os.path.exists(self.modelPath_base):
 			self.logger.info(f"Loading base model from local path: {self.modelPath_base}")
-			base_model = AutoModel.from_pretrained(modelFile_base)
+			base_model = AutoModel.from_config(modelFile_base)
 		else:
 			self.logger.info(f"Base model not found locally. Loading from Hugging Face Hub: {self.modelId}")
 			base_model = AutoModel.from_pretrained(self.modelId)
@@ -124,9 +124,9 @@ class HSSFLDON_ModelManager:
 
 		# Save the base model using transformers' save_pretrained when available
 		try:
-			if hasattr(self.base_model, "save_pretrained"):
+			try:
 				self.base_model.save_pretrained(self.modelPath_base)
-			else:
+			except Exception as e:
 				torch.save(self.base_model.state_dict(), modelFile_base)
 			self.logger.info(f"Base model saved to {modelFile_base}")
 		except Exception as e:
