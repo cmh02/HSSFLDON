@@ -311,8 +311,11 @@ class HSSFLDON_ServerApplication:
 		confidentEmbeddings, confidentCentroids = self._getEmbeddingsAndCentroids(modelManager=modelManager, dataLoader=confidentDataloader, numCentroids=numCentroids)
 
 		# Add embeddings to dataloaders
-		unconfidentDataloader.dataset = unconfidentDataloader.dataset.add_column("embeddings", unconfidentEmbeddings)
-		confidentDataloader.dataset = confidentDataloader.dataset.add_column("embeddings", confidentEmbeddings)
+		for i in range(len(unconfidentDatapoints)):
+			unconfidentDatapoints[i]["embeddings"] = unconfidentEmbeddings[i].cpu()
+			
+		for i in range(len(confidentDatapoints)):
+			confidentDatapoints[i]["embeddings"] = confidentEmbeddings[i].cpu()
 
 		# Calculate C-score for each unconfident datapoint
 		unconfidentWithCScores = self._calculateCScores(
