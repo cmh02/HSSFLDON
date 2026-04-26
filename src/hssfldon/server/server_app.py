@@ -125,7 +125,14 @@ class HSSFLDON_ServerApplication:
 			# Passive Aggregation: Aggregate client updates into global model for passive learning
 			self.enterState(HSSFLDON_ServerState.AGGREGATING)
 			self.logger.info(f"Aggregating client updates for iteration {iteration+1}/{self.learningIterations}!")
-
+			modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
+			avgStateDict = self._fedAverageClientUpdates(modelManager=modelManager, clientHeadPaths=self.clientHeadPathCache)
+			if avgStateDict is not None:
+				modelManager.component_head.load_state_dict(avgStateDict)
+				modelManager.saveClassificationHead(head=modelManager.component_head, name=f"classification_head_global.pt")
+				self.logger.info(f"Successfully aggregated client updates for iteration {iteration+1}/{self.learningIterations}!")
+			else:
+				self.logger.warning(f"Failed to aggregate client updates for iteration {iteration+1}/{self.learningIterations}!")
 
 	def launchApi(self) -> bool:
 		"""
@@ -170,16 +177,17 @@ class HSSFLDON_ServerApplication:
 		self.clientUpdateStatus[clientId] = False
 		self.clientHeadPathCache[clientId] = None
 
-	def _fedAverageClientUpdates(self, clientHeadPaths: dict[int, str]) -> None:
+	def _fedAverageClientUpdates(self, modelManager: HSSFLDON_ModelManager, clientHeadPaths: dict[int, str | None]) -> dict | None:
 		"""
 		Perform federated averaging on the client updates to create a new global model.
 
 		Args:
-			clientHeadPaths (dict[int, str]): A dictionary mapping client IDs to their classification head file paths.
+			modelManager (HSSFLDON_ModelManager): The model manager for handling classification heads (should be global at server).
+			clientHeadPaths (dict[int, str | None]): A dictionary mapping client IDs to their classification head file paths.
 		"""
 		self.logger.debug(f"Performing federated averaging on client updates: {clientHeadPaths}!")
 
-		# Load each client head and perform averaging
+		# Load each client head to get state dict
 		clientStateDicts = {}
 		for clientId, headPath in clientHeadPaths.items():
 			if headPath is None:
@@ -187,8 +195,26 @@ class HSSFLDON_ServerApplication:
 				continue
 
 			try:
-				
-				clientStateDict = torch.load(headPath, map_location='cpu', weights_only=True)
+				clientHead = modelManager.loadClassificationHead(name=headPath)
+				clientStateDicts[clientId] = clientHead.state_dict()
 			except Exception as e:
 				self.logger.error(f"Error loading classification head from client {clientId} at path `{headPath}`: {e}")
 				continue
+
+		# Make sure we got at least one valid client update before trying to aggregate
+		if not clientStateDicts:
+			self.logger.warning(f"No valid client updates available for aggregation!")
+			return None
+		
+		# Perform federated averaging on the state dicts
+		avgStateDict = {}
+		for key in modelManager.component_head.state_dict().keys():
+			clientValues = [stateDict[key] for stateDict in clientStateDicts if key in stateDict]
+			if clientValues:
+				avgStateDict[key] = torch.mean(torch.stack(clientValues), dim=0)
+			else:
+				self.logger.warning(f"No client values found for key `{key}` during aggregation!")
+				avgStateDict[key] = modelManager.component_head.state_dict()[key]
+
+		# Load the averaged state dict into the global model
+		return avgStateDict
