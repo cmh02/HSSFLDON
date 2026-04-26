@@ -115,10 +115,10 @@ class HSSFLDON_ClientApplication:
 		epochTrainingHistory = modelManager.train(
 			trainingDataLoader = dataloader,
 			validationDataLoader = None,
-			epochs = 1,
-			learningRate = 0.0001,
-			weightDecay = 0.01,
-			maxGradientNorm = 1 
+			epochs = int(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_EPOCHS", 1)),
+			learningRate = float(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_LR", 2e-5)),
+			weightDecay = float(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_WEIGHT_DECAY", 0.01)),
+			maxGradientNorm = float(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_MAX_GRAD_NORM", 1.0))
 		)
 
 		# Log training history
