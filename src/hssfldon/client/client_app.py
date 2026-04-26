@@ -127,6 +127,7 @@ class HSSFLDON_ClientApplication:
 
 		# Save classifier head and submit update to server
 		modelManager.saveClassificationHead(head=modelManager.component_head, name=f"client_{self.client_id}_head.pt")
+		time.sleep(5)
 		self.submitUpdateToServer(headPath=f"client_{self.client_id}_head.pt")
 
 		# Final info log and cleanup
