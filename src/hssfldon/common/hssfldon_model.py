@@ -476,19 +476,55 @@ class HSSFLDON_ModelManager:
 			return logits, labels
 	
 	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 16, max_length: int = 256, shuffle: bool = True):
-		from torch.utils.data import Dataset, DataLoader
 		class _SimpleDS(Dataset):
+
 			def __init__(self, tokenizer, texts, labels, max_length):
 				self.tokenizer = tokenizer
 				self.texts = texts
 				self.labels = labels
 				self.max_length = max_length
-			def __len__(self): return len(self.texts)
+				self.others = {}
+
+			def __len__(self): 
+				return len(self.texts)
+
 			def __getitem__(self, idx):
 				enc = self.tokenizer(self.texts[idx], truncation=True, max_length=self.max_length, padding="max_length", return_tensors="pt")
 				item = {k: v.squeeze(0) for k, v in enc.items()}
-				if labels is not None:
+				if self.labels is not None:
 					item["labels"] = torch.tensor(self.labels[idx], dtype=torch.long)
+				for col_name, col_values in self.others.items():
+					val = col_values[idx]
+					if not isinstance(val, torch.Tensor):
+						val = torch.tensor(val)
+					item[col_name] = val
 				return item
+			
+			def add_column(self, name: str, values: Any):
+				"""
+				Adds a new column of data to the dataset.
+
+				Args:
+					name (str): The name of the new column.
+					values (list): A list of values for the new column, which must have the same length as the dataset.
+				"""
+				if len(values) != len(self.texts):
+					raise ValueError(f"Length mismatch: '{name}' has {len(values)} items, but dataset has {len(self.texts)} items.")
+				self.others[name] = values
+				return self
+			
+			def remove_column(self, name: str):
+				"""
+				Removes a column of data from the dataset.
+
+				Args:
+					name (str): The name of the column to remove.
+				"""
+				if name in self.others:
+					self.others.pop(name)
+				else:
+					raise ValueError(f"Column '{name}' not found in dataset.")
+				return self
+
 		ds = _SimpleDS(self.tokenizer, texts, labels, max_length)
 		return DataLoader(ds, batch_size=batch_size, shuffle=shuffle, collate_fn=None)
