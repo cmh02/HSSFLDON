@@ -421,8 +421,36 @@ class HSSFLDON_ModelManager:
 		self.logger.info(f"Model evaluation completed! Validation Loss: {valStats_lossAverage:.4f}, Validation Accuracy: {valStats_accuracy:.4f}")
 		return valStats_lossAverage, valStats_accuracy
 	
-	def predict(self, dataLoader: DataLoader) -> Tuple[torch.Tensor, torch.Tensor]:
-		pass
+	def predict(self, dataLoader: DataLoader, outputType: HSSFLDON_PredictionOutputType=HSSFLDON_PredictionOutputType.BINARY_PREDICTION) -> Tuple[torch.Tensor, torch.Tensor]:
+		
+		# Holder for all logits
+		logitsList = []
+		labelsList = []
+
+		# Iterate over validation data
+		lossFunction = torch.nn.BCEWithLogitsLoss()
+		with torch.no_grad():
+			for batch in dataLoader:
+
+				# Forward pass
+				logits, labels = self._forwardPass(batch)
+				logitsList.append(logits.cpu())
+				labelsList.append(labels.cpu())
+
+		# Concatenate all logits
+		logits = torch.cat(logitsList, dim=0)
+		labels = torch.cat(labelsList, dim=0)
+
+		# Process output type
+		if outputType == HSSFLDON_PredictionOutputType.LOGIT_PREDICTION:
+			return logits, labels
+		elif outputType == HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION:
+			return torch.sigmoid(logits), labels
+		elif outputType == HSSFLDON_PredictionOutputType.BINARY_PREDICTION:
+			return (torch.sigmoid(logits) > 0.5).long(), labels
+		else:
+			self.logger.error(f"Invalid output type specified for predict(): {outputType}. Defaulting to returning logits.")
+			return logits, labels
 	
 	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 16, max_length: int = 256, shuffle: bool = True):
 		from torch.utils.data import Dataset, DataLoader
