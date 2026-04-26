@@ -450,6 +450,7 @@ class HSSFLDON_ModelManager:
 		lossFunction = torch.nn.BCEWithLogitsLoss()
 		with torch.no_grad():
 			for batch in dataLoader:
+				self.logger.debug(f"Making predictions on batch {batch} of {len(dataLoader)} for output type {outputType}!")
 
 				# Forward pass
 				logits, labels, embeddings = self._forwardPass(batch)
