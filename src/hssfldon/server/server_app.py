@@ -209,7 +209,7 @@ class HSSFLDON_ServerApplication:
 		# Perform federated averaging on the state dicts
 		avgStateDict = {}
 		for key in modelManager.component_head.state_dict().keys():
-			clientValues = [stateDict[key] for stateDict in clientStateDicts if key in stateDict]
+			clientValues = [stateDict[key] for stateDict in clientStateDicts if key in stateDict.keys()]
 			if clientValues:
 				avgStateDict[key] = torch.mean(torch.stack(clientValues), dim=0)
 			else:
