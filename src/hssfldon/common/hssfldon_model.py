@@ -455,7 +455,8 @@ class HSSFLDON_ModelManager:
 				# Forward pass
 				logits, labels, embeddings = self._forwardPass(batch)
 				logitsList.append(logits.cpu())
-				labelsList.append(labels.cpu())
+				if labels is not None:
+					labelsList.append(labels.cpu())
 
 		# Concatenate all logits
 		logits = torch.cat(logitsList, dim=0) if len(logitsList) > 0 else torch.empty((0, self.modelNClasses))
