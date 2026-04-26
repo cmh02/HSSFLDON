@@ -35,7 +35,7 @@ class RegisterClientRequest(BaseModel):
     """
     Request model for client registration.
     """
-    client_id: int = Field(..., gte=0, description="Unique identifier for the client")
+    client_id: int = Field(..., gte=0, description="Unique identifier for the client") # type: ignore
 
 class RegisterClientResponse(BaseModel):
     """
@@ -56,7 +56,7 @@ async def register_client(request: Request, payload: RegisterClientRequest):
     server_app: "HSSFLDON_ServerApplication" = request.app.state.server_app
 
     # Await the registration
-    await anyio.to_thread.run_sync(server_app.registerClient, payload.client_id)
+    await anyio.to_thread.run_sync(server_app.registerClient, payload.client_id) # type: ignore
 
     # Return success
     return RegisterClientResponse(status="ok", message=f"Client {payload.client_id} registered successfully!", client_id=payload.client_id)
@@ -65,7 +65,7 @@ class GetTaskRequest(BaseModel):
     """
     Request model for fetching the next task for a client.
     """
-    client_id: int = Field(..., gte=0, description="Unique identifier for the client")
+    client_id: int = Field(..., gte=0, description="Unique identifier for the client") # type: ignore
 
 class GetTaskResponse(BaseModel):
     """
@@ -92,42 +92,13 @@ async def getClientTask(request: Request, payload: GetTaskRequest = Depends()):
         return GetTaskResponse(status="ok", message=f"Next task for client {payload.client_id} fetched successfully!", task=task.name)
     else:
         return GetTaskResponse(status="ok", message=f"No tasks available for client {payload.client_id} at this time.", task=None)
-    
-class GetGlobalModelRequest(BaseModel):
-    """
-    Request model for fetching the global model adapter.
-    """
-    client_id: int = Field(..., gte=0, description="Unique identifier for the client")
-
-class GetGlobalModelResponse(BaseModel):
-    """
-    Response model for fetching the global model adapter.
-    """
-    status: str = Field(..., description="Status of the request")
-    message: str = Field(..., description="Additional information about the request result")
-    adapter_path: Optional[str] = Field(None, description="The path to the global model adapter, if available")
-
-@HSSFLDON_ServerAPIRouter.get("/global_model", response_model=GetGlobalModelResponse, status_code=status.HTTP_200_OK, tags=["Model Management"])
-async def getGlobalModel(request: Request, payload: GetGlobalModelRequest=Depends()):
-    """
-    API Endpoint: /global_model
-    Method: GET
-    Description: Fetch the global model adapter.
-    """
-    # Access the server application instance
-    server_app: "HSSFLDON_ServerApplication" = request.app.state.server_app
-
-    # Get the global model adapter path (for now, just return a placeholder)
-    adapter_path = server_app.adaptersGlobalFullPath
-
-    return GetGlobalModelResponse(status="ok", message=f"Global model adapter fetched successfully!", adapter_path=adapter_path)
 
 class SubmitUpdateRequest(BaseModel):
     """
     Request model for submitting a client update.
     """
-    client_id: int = Field(..., gte=0, description="Unique identifier for the client")
-    adapter_path: str = Field(..., description="Path to the client's model adapter directory")
+    client_id: int = Field(..., gte=0, description="Unique identifier for the client") # type: ignore
+    clientHeadPath: str = Field(..., description="Path to the client's classification head!")
 
 class SubmitUpdateResponse(BaseModel):
     """
@@ -148,7 +119,7 @@ async def submitClientUpdate(request: Request, payload: SubmitUpdateRequest):
 
     # Mark as received and store path
     server_app.clientUpdateStatus[payload.client_id] = True
-    server_app.clientAdapterPathCache[payload.client_id] = payload.adapter_path
+    server_app.clientHeadPathCache[payload.client_id] = payload.clientHeadPath
 
     return SubmitUpdateResponse(status="ok", message=f"Client {payload.client_id} update submitted successfully!")
 
@@ -156,7 +127,7 @@ class SubmitEvaluationRequest(BaseModel):
     """
     Request model for submitting a client evaluation.
     """
-    client_id: int = Field(..., gte=0, description="Unique identifier for the client")
+    client_id: int = Field(..., gte=0, description="Unique identifier for the client") # type: ignore
     evaluation_results: dict = Field(..., description="Evaluation results from the client")
 
 class SubmitEvaluationResponse(BaseModel):
