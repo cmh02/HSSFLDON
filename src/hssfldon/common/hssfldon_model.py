@@ -438,8 +438,8 @@ class HSSFLDON_ModelManager:
 				labelsList.append(labels.cpu())
 
 		# Concatenate all logits
-		logits = torch.cat(logitsList, dim=0)
-		labels = torch.cat(labelsList, dim=0)
+		logits = torch.cat(logitsList, dim=0) if len(logitsList) > 0 else torch.empty((0, self.modelNClasses))
+		labels = torch.cat(labelsList, dim=0) if len(labelsList) > 0 else torch.empty((0, self.modelNClasses))
 
 		# Process output type
 		if outputType == HSSFLDON_PredictionOutputType.LOGIT_PREDICTION:
