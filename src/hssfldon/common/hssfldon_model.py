@@ -353,12 +353,12 @@ class HSSFLDON_ModelManager:
 
 				# Calculate probabilities and predictions
 				probabilities = torch.sigmoid(logits)
-				predictions = (probabilities > 0.5).to(batch["labels"].dtype)
+				predictions = (probabilities > 0.5)
 
 				# Track batch stats
-				batchStats_total = batch["labels"].numel()
+				batchStats_total = labels.numel()
 				batchStats_loss = loss.item() * batchStats_total
-				batchStats_correct = (predictions == batch["labels"]).sum().item()
+				batchStats_correct = (predictions == labels).sum().item()
 				batchStats_lossAverage = batchStats_loss / batchStats_total
 				batchStats_accuracy = batchStats_correct / batchStats_total
 
@@ -414,12 +414,12 @@ class HSSFLDON_ModelManager:
 
 				# Calculate probabilities and predictions
 				probabilities = torch.sigmoid(logits)
-				predictions = (probabilities > 0.5).to(batch["labels"].dtype)
+				predictions = (probabilities > 0.5)
 
 				# Track validation stats
-				total = batch["labels"].numel()
+				total = labels.numel()
 				loss = loss.item() * total
-				correct = (predictions == batch["labels"]).sum().item()
+				correct = (predictions == labels).sum().item()
 				valStats_total += total
 				valStats_loss += loss
 				valStats_correct += correct
