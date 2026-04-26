@@ -369,6 +369,10 @@ class HSSFLDON_ServerApplication:
 		# Concat embeddings into tensor
 		allEmbeddings = torch.cat(allEmbeddings, dim=0)
 
+		# Ensure centroids are on same device as embeddings
+		unconfidentCentroids = unconfidentCentroids.to(modelManager.device)
+		confidentCentroids = confidentCentroids.to(modelManager.device)
+
 		# Calculate cosine similarities to each centroid
 		unconfidentCentroidSimilarities = F.cosine_similarity(
 			x1=allEmbeddings.unsqueeze(1), 
