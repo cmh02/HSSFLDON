@@ -25,13 +25,10 @@ fsspec==2026.2.0
 git-filter-repo==2.47.0
 h11==0.16.0
 hf-xet==1.4.3
--e git+https://github.com/cmh02/HSSFLDON.git@af350144ec75c8e9bd326d2e20d4638b408d636d#egg=hssfldon
 httpcore==1.0.9
 httpx==0.28.1
 huggingface_hub==1.11.0
 idna==3.11
-ipykernel==7.2.0
-ipython==9.12.0
 ipython_pygments_lexers==1.1.1
 jedi==0.19.2
 Jinja2==3.1.6
@@ -47,14 +44,12 @@ multidict==6.7.1
 multiprocess==0.70.19
 nest-asyncio==1.6.0
 networkx==3.6.1
-numpy==2.4.4
 packaging==26.1
 pandas==3.0.2
 parso==0.8.6
 peft==0.19.1
 pexpect==4.9.0
 platformdirs==4.9.6
-prompt_toolkit==3.0.52
 propcache==0.4.1
 protobuf==7.34.1
 psutil==7.2.2
@@ -67,7 +62,6 @@ Pygments==2.20.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 PyYAML==6.0.3
-pyzmq==27.1.0
 regex==2026.4.4
 requests==2.33.1
 rich==15.0.0
@@ -85,7 +79,6 @@ threadpoolctl==3.6.0
 tiktoken==0.12.0
 tokenizers==0.22.2
 torch==2.11.0
-tornado==6.5.5
 tqdm==4.67.3
 traitlets==5.14.3
 transformers==5.5.4
