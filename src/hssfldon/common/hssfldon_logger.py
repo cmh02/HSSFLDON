@@ -31,6 +31,9 @@ class HSSFLDON_Logger:
 			datefmt='%m-%d %H:%M:%S'
 		)
 
+		# Prevent propogation to root logger to avoid duplicate logs
+		self.logger.propagate = False
+
 		# Setup console handler
 		console_handler = self._setup_getConsoleHandler()
 		self.logger.addHandler(console_handler)
