@@ -149,7 +149,9 @@ class HSSFLDON_ServerApplication:
 			activeDataloader = self.unlabeledDataset.add_column("probabilities", probabilities)
 			finalistDataloader = self._getFinalistDatapointsForActiveLearning(
 				dataLoader=activeDataloader,
-				confidenceThreshold = float(os.getenv("HSSFLDON_ACTIVE_LEARNING_CONFIDENCE", 0.5))
+				confidenceThreshold = float(os.getenv("HSSFLDON_ACTIVE_LEARNING_CONFIDENCE", 0.5)),
+				numFinalists=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_FINALISTS", 10)),
+				numCentroids=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_CENTROIDS", 5))
 			)
 
 	def launchApi(self) -> bool:
@@ -237,5 +239,12 @@ class HSSFLDON_ServerApplication:
 		# Load the averaged state dict into the global model
 		return avgStateDict
 	
-	def _getFinalistDatapointsForActiveLearning(self, dataLoader: DataLoader, confidenceThreshold: float):
-		pass
+	def _getFinalistDatapointsForActiveLearning(self, dataLoader: DataLoader, confidenceThreshold: float, numFinalists: int, numCentroids: int) -> DataLoader:
+		"""
+		Get the finalist datapoints to send to clients for active learning based on confidence threshold.
+
+		To calculate this, we seek to find which datapoints both best represent the unlabeled dataset and
+		are the most uncertain for the model. To do this, we calculate the which datapoints among the
+		unconfident datapoints are closest to the centroids of the unlabeled dataset while farthest from
+		the centroids of the labeled dataset.
+		"""
