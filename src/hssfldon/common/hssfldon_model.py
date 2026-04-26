@@ -417,9 +417,12 @@ class HSSFLDON_ModelManager:
 				predictions = (probabilities > 0.5).to(batch["labels"].dtype)
 
 				# Track validation stats
-				valStats_loss += loss.item() * batch["labels"].size(0)
-				valStats_correct += (predictions == batch["labels"]).sum().item()
-				valStats_total += batch["labels"].size(0)
+				total = batch["labels"].numel()
+				loss = loss.item() * total
+				correct = (predictions == batch["labels"]).sum().item()
+				valStats_total += total
+				valStats_loss += loss
+				valStats_correct += correct
 
 		# Calculate average loss and accuracy
 		valStats_lossAverage = valStats_loss / max(1, valStats_total)
