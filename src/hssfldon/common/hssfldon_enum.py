@@ -83,3 +83,6 @@ class HSSFLDON_PredictionOutputType(Enum):
 
     # Output type for a client to return logits for each category
     LOGIT_PREDICTION = 2
+
+    # Output type for a client to return an embedding vector for each datapoint
+    EMBEDDING_PREDICTION = 3

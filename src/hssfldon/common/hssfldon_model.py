@@ -285,13 +285,27 @@ class HSSFLDON_ModelManager:
 			self.logger.debug(f"Labels found in batch; moved to device: {self.device}")
 		
 		# Forward pass through model
-		logits = self.model(**encodings)
-		if isinstance(logits, tuple):
-			logits = logits[0]
-			self.logger.warning(f"Model output is a tuple; using the first element as logits!")
+		outputs = self.model(
+			**encodings, 
+			output_hidden_states=True
+		)
+
+		# Separate logits and embeddings
+		if hasattr(outputs, "logits") and hasattr(outputs, "hidden_states"):
+			logits = outputs.logits
+			embeddings = outputs.hidden_states[-1][:, 0, :]
+			
+		elif isinstance(outputs, tuple):
+			logits = outputs[0]
+			embeddings = outputs[1][-1][:, 0, :] 
+			self.logger.warning(f"Model output is a tuple, extracting embeddings via index.")
 		
+		else:
+			self.logger.error(f"Unexpected model output format `type: {type(outputs)}` during predict()!")
+			raise ValueError("Unexpected model output format.")
+
 		# Return logits and labels
-		return logits, labels
+		return logits, labels, embeddings
 
 	def train(self, dataLoader: DataLoader, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0, schedulerWarmupSteps: int = 0):
 		"""
@@ -320,7 +334,7 @@ class HSSFLDON_ModelManager:
 			for i, batch in enumerate(dataLoader, 1):
 
 				# Forward pass
-				logits, labels = self._forwardPass(batch)
+				logits, labels, embeddings = self._forwardPass(batch)
 
 				# Ensure labels have same dtype and device as logits for loss calculation
 				if isinstance(labels, torch.Tensor):
@@ -400,7 +414,7 @@ class HSSFLDON_ModelManager:
 			for batch in dataLoader:
 
 				# Forward pass
-				logits, labels = self._forwardPass(batch)
+				logits, labels, embeddings = self._forwardPass(batch)
 				loss = lossFunction(logits, labels)
 
 				# Calculate probabilities and predictions
@@ -433,7 +447,7 @@ class HSSFLDON_ModelManager:
 			for batch in dataLoader:
 
 				# Forward pass
-				logits, labels = self._forwardPass(batch)
+				logits, labels, embeddings = self._forwardPass(batch)
 				logitsList.append(logits.cpu())
 				labelsList.append(labels.cpu())
 
@@ -444,6 +458,8 @@ class HSSFLDON_ModelManager:
 		# Process output type
 		if outputType == HSSFLDON_PredictionOutputType.LOGIT_PREDICTION:
 			return logits, labels
+		elif outputType == HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION:
+			return embeddings, labels
 		elif outputType == HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION:
 			return torch.sigmoid(logits), labels
 		elif outputType == HSSFLDON_PredictionOutputType.BINARY_PREDICTION:
