@@ -225,3 +225,11 @@ __marimo__/
 
 # Log Files
 logs/
+
+# Model
+models/model_base/
+models/model_base/*
+models/model_base/*.*
+models/model_tokenizer/
+models/model_tokenizer/*
+models/model_tokenizer/*.*
