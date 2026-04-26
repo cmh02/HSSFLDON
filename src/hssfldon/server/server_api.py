@@ -98,7 +98,7 @@ class SubmitUpdateRequest(BaseModel):
     Request model for submitting a client update.
     """
     client_id: int = Field(..., gte=0, description="Unique identifier for the client") # type: ignore
-    clientHeadPath: str = Field(..., description="Path to the client's classification head!")
+    head_path: str = Field(..., description="Path to the client's classification head!")
 
 class SubmitUpdateResponse(BaseModel):
     """
@@ -119,7 +119,7 @@ async def submitClientUpdate(request: Request, payload: SubmitUpdateRequest):
 
     # Mark as received and store path
     server_app.clientUpdateStatus[payload.client_id] = True
-    server_app.clientHeadPathCache[payload.client_id] = payload.clientHeadPath
+    server_app.clientHeadPathCache[payload.client_id] = payload.head_path
 
     return SubmitUpdateResponse(status="ok", message=f"Client {payload.client_id} update submitted successfully!")
 
