@@ -25,7 +25,7 @@ fsspec==2026.2.0
 git-filter-repo==2.47.0
 h11==0.16.0
 hf-xet==1.4.3
--e git+https://github.com/cmh02/HSSFLDON.git@3bada45a9adb7cb2ca7f8434acbeb4a8313010a1#egg=hssfldon
+-e git+https://github.com/cmh02/HSSFLDON.git@af350144ec75c8e9bd326d2e20d4638b408d636d#egg=hssfldon
 httpcore==1.0.9
 httpx==0.28.1
 huggingface_hub==1.11.0
