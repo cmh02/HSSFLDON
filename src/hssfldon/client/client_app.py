@@ -41,6 +41,9 @@ class HSSFLDON_ClientApplication:
 		# Get client ID from env
 		self.client_id: int = int(os.getenv("HSSFLDON_CLIENT_ID", f"{os.getpid()}"))
 
+		# Make static reference for head identifier
+		self.headIdentifier: str =  f"classification_head_client_{self.client_id}"
+
 		# Get data directory from env and make path for client
 		self.dataDirectory: str = os.getenv("HSSFLDON_CLIENT_DATA_DIRECTORY", "data")
 		self.dataPath: str = os.path.join(self.dataDirectory, f"clients/Client_{self.client_id}.parquet")
@@ -90,6 +93,13 @@ class HSSFLDON_ClientApplication:
 				time.sleep(60)
 				continue
 
+			# Task: Active Learning
+			elif (task == HSSFLDON_ClientTask.DO_ACTIVE_LEARNING):
+				self.logger.debug(f"Client received DO_ACTIVE_LEARNING task. Starting active learning process!")
+				self.doActiveLearning()
+				time.sleep(60)
+				continue
+
 	def doPassiveLearning(self):
 		"""
 		Perform the passive learning process for the client.
@@ -114,7 +124,6 @@ class HSSFLDON_ClientApplication:
 		# Train model on dataset
 		epochTrainingHistory = modelManager.train(
 			dataLoader = dataloader,
-			validationDataLoader = None,
 			epochs = int(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_EPOCHS", 1)),
 			learningRate = float(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_LR", 2e-5)),
 			weightDecay = float(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_WEIGHT_DECAY", 0.01)),
@@ -126,12 +135,57 @@ class HSSFLDON_ClientApplication:
 		self.logger.debug(f"Passive learning training history for this round: {epochTrainingHistory}")
 
 		# Save classifier head and submit update to server
-		modelManager.saveClassificationHead(head=modelManager.component_head, name=f"client_{self.client_id}_head.pt")
+		modelManager.saveClassificationHead(head=modelManager.component_head, name=self.headIdentifier)
 		time.sleep(5)
-		self.submitUpdateToServer(headPath=f"client_{self.client_id}_head.pt")
+		self.submitUpdateToServer(headPath=self.headIdentifier)
 
 		# Final info log and cleanup
 		self.logger.info(f"Completed passive learning process for this round!")
+		del modelManager
+		gc.collect()
+		torch.cuda.empty_cache()
+
+	def doActiveLearning(self):
+		"""
+		Perform the active learning process for the client.
+		"""
+		self.logger.info(f"Starting active learning process!")
+
+		# Get datapoint from server for active learning
+		text = self.getActiveLearningDatapoint()
+		if text is None:
+			self.logger.error(f"Failed to get active learning datapoint from server. Aborting this round of active learning!")
+			return
+		
+		# Create model manager based on client model from passive learning
+		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"client_{self.client_id}")
+
+		# Tokenize datapoint and prepare dataloader
+		dataloader: torch.utils.data.DataLoader = modelManager.tokenize_and_create_dataloader(
+			texts = [text],
+			labels = None
+		)
+
+		# Train model on datapoint
+		epochTrainingHistory = modelManager.train(
+			dataLoader=dataloader,
+			epochs=int(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_EPOCHS", 100)),
+			learningRate=float(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_LR", 2e-5)),
+			weightDecay=float(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_WEIGHT_DECAY", 0.01)),
+			maxGradientNorm=float(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_MAX_GRAD_NORM", 1.0)),
+			schedulerWarmupSteps=int(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_SCHEDULER_WARMUP_STEPS", 0))
+		)
+
+		# Log training history
+		self.logger.debug(f"Active learning training history for this round: {epochTrainingHistory}")
+
+		# Save classifier head and submit update to server
+		modelManager.saveClassificationHead(head=modelManager.component_head, name=self.headIdentifier)
+		time.sleep(5)
+		self.submitUpdateToServer(headPath=self.headIdentifier)
+
+		# Final info log and cleanup
+		self.logger.info(f"Completed active learning process for this round!")
 		del modelManager
 		gc.collect()
 		torch.cuda.empty_cache()
@@ -239,3 +293,19 @@ class HSSFLDON_ClientApplication:
 			self.logger.info(f"Successfully submitted update to server! Server response: {data.get('message')}")
 		except Exception as e:
 			self.logger.error(f"An exception occurred while submitting update to server: {e}")
+
+	def getActiveLearningDatapoint(self):
+		"""
+		Get the active learning datapoint from the server.
+		"""
+		self.logger.debug(f"Making request to fetch active learning datapoint!")
+		try:
+			response: requests.Response = requests.get(f"{self.server_api_url}/active_datapoint?client_id={self.client_id}")
+			response.raise_for_status()
+			data: dict = response.json()
+			datapoint: str = data.get("datapoint")
+			self.logger.info(f"Received active learning datapoint from server: {datapoint}")
+			return datapoint
+		except Exception as e:
+			self.logger.error(f"An exception occurred while fetching active learning datapoint: {e}")
+		return None
