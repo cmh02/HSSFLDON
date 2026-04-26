@@ -198,7 +198,7 @@ class HSSFLDON_ServerApplication:
 				maxCategoryIndex = torch.argmax(datapoint["probabilities"]).item()
 				oracleId = self.oracleToCategoryMapping.get(maxCategoryIndex)
 				if self.clientActiveLearningDatapointCache.get(oracleId) is None:
-					self.clientActiveLearningDatapointCache[oracleId] = datapoint
+					self.clientActiveLearningDatapointCache[oracleId] = datapoint["text"]
 					self.logger.info(f"Assigned active learning datapoint to client {oracleId} based on oracle mapping for category index {maxCategoryIndex}!")
 				else:
 					self.logger.info(f"Client {oracleId} already has an active learning datapoint assigned, skipping additional datapoint assignment for category index {maxCategoryIndex}!")
@@ -364,6 +364,10 @@ class HSSFLDON_ServerApplication:
 			
 		for i in range(len(confidentDatapoints)):
 			confidentDatapoints[i]["embeddings"] = confidentEmbeddings[i].cpu()
+
+		# Turn unconfident and confident datapoints into dataloaders for processing
+		unconfidentDataloader = DataLoader(unconfidentDatapoints, batch_size=32)
+		confidentDataloader = DataLoader(confidentDatapoints, batch_size=32)
 
 		# Calculate C-score for each unconfident datapoint
 		unconfidentWithCScores = self._calculateCScores(
