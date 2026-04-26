@@ -22,9 +22,10 @@ fastapi==0.136.0
 filelock==3.29.0
 frozenlist==1.8.0
 fsspec==2026.2.0
+git-filter-repo==2.47.0
 h11==0.16.0
 hf-xet==1.4.3
--e git+https://github.com/cmh02/HSSFLDON.git@3453b601b579c4680ef81687b1c436c56843289a#egg=hssfldon
+-e git+https://github.com/cmh02/HSSFLDON.git@3bada45a9adb7cb2ca7f8434acbeb4a8313010a1#egg=hssfldon
 httpcore==1.0.9
 httpx==0.28.1
 huggingface_hub==1.11.0
