@@ -292,7 +292,7 @@ class HSSFLDON_ModelManager:
 		# Return logits and labels
 		return logits, labels
 
-	def train(self, trainingDataLoader: DataLoader, validationDataLoader: Any = None, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0):
+	def train(self, trainingDataLoader: DataLoader, validationDataLoader: Any = None, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0, schedulerWarmupSteps: int = 0):
 		"""
 		Train the model on the given data loader.
 		"""
@@ -300,7 +300,7 @@ class HSSFLDON_ModelManager:
 
 		# Build optimizer and scheduler
 		optimizer = self.buildOptimizer(learningRate=learningRate, weightDecay=weightDecay)
-		scheduler = self.buildScheduler(optimizer, numWarmupSteps=0, numTrainingSteps=epochs * len(trainingDataLoader))
+		scheduler = self.buildScheduler(optimizer, numWarmupSteps=schedulerWarmupSteps, numTrainingSteps=epochs * len(trainingDataLoader))
 
 		# Training loop
 		epochHistory = {}
