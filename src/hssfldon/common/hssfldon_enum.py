@@ -69,3 +69,17 @@ class HSSFLDON_ClientTask(Enum):
 
     # Task for a client to evaluate and send evaluation results to server
     DO_EVALUATION = 3
+
+class HSSFLDON_PredictionOutputType(Enum):
+    """
+    Enum for the different types of prediction outputs that can be returned by HSSFLDON clients.
+    """
+
+    # Output type for a client to return a binary prediction for each category
+    BINARY_PREDICTION = 0
+
+    # Output type for a client to return a probability for each category
+    PROBABILITY_PREDICTION = 1
+
+    # Output type for a client to return logits for each category
+    LOGIT_PREDICTION = 2

@@ -113,7 +113,7 @@ class HSSFLDON_ClientApplication:
 
 		# Train model on dataset
 		epochTrainingHistory = modelManager.train(
-			trainingDataLoader = dataloader,
+			dataLoader = dataloader,
 			validationDataLoader = None,
 			epochs = int(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_EPOCHS", 1)),
 			learningRate = float(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_LR", 2e-5)),

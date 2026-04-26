@@ -17,6 +17,7 @@ from transformers import AutoModel, AutoModelForSequenceClassification, AutoToke
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
+from hssfldon.common.hssfldon_enum import HSSFLDON_PredictionOutputType
 
 class HSSFLDON_ClassifierHead(torch.nn.Module):
 	"""
@@ -292,7 +293,7 @@ class HSSFLDON_ModelManager:
 		# Return logits and labels
 		return logits, labels
 
-	def train(self, trainingDataLoader: DataLoader, validationDataLoader: Any = None, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0, schedulerWarmupSteps: int = 0):
+	def train(self, dataLoader: DataLoader, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0, schedulerWarmupSteps: int = 0):
 		"""
 		Train the model on the given data loader.
 		"""
@@ -300,7 +301,7 @@ class HSSFLDON_ModelManager:
 
 		# Build optimizer and scheduler
 		optimizer = self.buildOptimizer(learningRate=learningRate, weightDecay=weightDecay)
-		scheduler = self.buildScheduler(optimizer, numWarmupSteps=schedulerWarmupSteps, numTrainingSteps=epochs * len(trainingDataLoader))
+		scheduler = self.buildScheduler(optimizer, numWarmupSteps=schedulerWarmupSteps, numTrainingSteps=epochs * len(dataLoader))
 
 		# Training loop
 		epochHistory = {}
@@ -316,7 +317,7 @@ class HSSFLDON_ModelManager:
 
 			# Iterate over training data
 			lossFunction = torch.nn.BCEWithLogitsLoss()
-			for i, batch in enumerate(trainingDataLoader, 1):
+			for i, batch in enumerate(dataLoader, 1):
 
 				# Forward pass
 				logits, labels = self._forwardPass(batch)
@@ -370,26 +371,16 @@ class HSSFLDON_ModelManager:
 				epochStats_accuracy = epochStats_correct / epochStats_total
 
 				# Log
-				self.logger.debug(f"Processed batch {i} / {len(trainingDataLoader)} for epoch {epoch}/{epochs}! Batch loss: {batchStats_lossAverage:.4f}, Batch accuracy: {batchStats_accuracy:.4f}, Epoch loss: {epochStats_lossAverage:.4f}, Epoch accuracy: {epochStats_accuracy:.4f}")
+				self.logger.debug(f"Processed batch {i} / {len(dataLoader)} for epoch {epoch}/{epochs}! Batch loss: {batchStats_lossAverage:.4f}, Batch accuracy: {batchStats_accuracy:.4f}, Epoch loss: {epochStats_lossAverage:.4f}, Epoch accuracy: {epochStats_accuracy:.4f}")
 
 			# Save epoch stats to history
-			epochHistory[epoch] = {"train": {}, "validation": {}}
-			epochHistory[epoch]["train"]["loss"] = epochStats_lossAverage
-			epochHistory[epoch]["train"]["accuracy"] = epochStats_accuracy
-
-			# Perform validation if given after each epoch
-			if validationDataLoader is None:
-				self.logger.debug(f"Epoch {epoch}/{epochs} completed! Train Loss: {epochStats_lossAverage:.4f}, Train Accuracy: {epochStats_accuracy:.4f}")
-			else:
-				validationLoss, validationAccuracy = self.evaluate(validationDataLoader)
-				epochHistory[epoch]["validation"]["loss"] = validationLoss
-				epochHistory[epoch]["validation"]["accuracy"] = validationAccuracy
-				self.logger.debug(f"Epoch {epoch}/{epochs} completed! Train Loss: {epochStats_lossAverage:.4f}, Train Accuracy: {epochStats_accuracy:.4f}, Validation Loss: {validationLoss:.4f}, Validation Accuracy: {validationAccuracy:.4f}")
-
+			epochHistory[epoch] = {"loss": epochStats_lossAverage, "accuracy": epochStats_accuracy}
+			self.logger.debug(f"Epoch {epoch}/{epochs} completed! Train Loss: {epochStats_lossAverage:.4f}, Train Accuracy: {epochStats_accuracy:.4f}")
+		
 		self.logger.info(f"Training completed for {epochs} epochs!")
 		return epochHistory
 
-	def evaluate(self, validationDataLoader: DataLoader) -> tuple[float, float]:
+	def evaluate(self, dataLoader: DataLoader) -> tuple[float, float]:
 		"""
 		Evaluate model on given data loader.
 		"""
@@ -406,7 +397,7 @@ class HSSFLDON_ModelManager:
 		# Iterate over validation data
 		lossFunction = torch.nn.BCEWithLogitsLoss()
 		with torch.no_grad():
-			for batch in validationDataLoader:
+			for batch in dataLoader:
 
 				# Forward pass
 				logits, labels = self._forwardPass(batch)
@@ -430,21 +421,8 @@ class HSSFLDON_ModelManager:
 		self.logger.info(f"Model evaluation completed! Validation Loss: {valStats_lossAverage:.4f}, Validation Accuracy: {valStats_accuracy:.4f}")
 		return valStats_lossAverage, valStats_accuracy
 	
-	def predict(self, texts: list[str], batchSize: int = 16, maxLength: int = 256):
-
-		# Create holder for output
-		outputs = []
-
-		# Pocess in batches
-		with torch.no_grad():
-			for i in range(0, len(texts), batchSize):
-				batchTexts = texts[i:i+batchSize]
-				encodings = self.tokenizer(batchTexts, truncation=True, padding=True, max_length=maxLength, return_tensors="pt")
-				logits, _ = self._forwardPass(encodings)
-				probabilities = torch.sigmoid(logits)
-				predictions = (probabilities > 0.5)
-				outputs.extend(predictions.cpu().tolist())
-		return outputs
+	def predict(self, dataLoader: DataLoader) -> Tuple[torch.Tensor, torch.Tensor]:
+		pass
 	
 	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 16, max_length: int = 256, shuffle: bool = True):
 		from torch.utils.data import Dataset, DataLoader
