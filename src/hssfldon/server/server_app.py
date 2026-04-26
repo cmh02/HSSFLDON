@@ -24,14 +24,15 @@ from datasets import load_dataset, Dataset
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from safetensors.torch import save_file, load_file
-
+from torch.utils.data import DataLoader
 
 
 # Project Imports
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger
-from hssfldon.common.hssfldon_enum import HSSFLDON_ServerState, HSSFLDON_ClientTask
+from hssfldon.common.hssfldon_enum import HSSFLDON_ServerState, HSSFLDON_ClientTask, HSSFLDON_PredictionOutputType
 from hssfldon.server.server_api import HSSFLDON_ServerAPIRouter
 from hssfldon.common.hssfldon_model import HSSFLDON_ModelManager
+from hssfldon.common.hssfldon_data import HSSFLDON_DataLoader
 
 class HSSFLDON_ServerApplication:
 	"""
@@ -87,7 +88,11 @@ class HSSFLDON_ServerApplication:
 		self.dataFilePath: str = os.path.join(self.dataDirectory, f"server/server.parquet")
 		if not os.path.exists(self.dataFilePath):
 			self.logger.error(f"Data file missing: {self.dataFilePath}")
-			raise FileNotFoundError(f"Cannot train without data: {self.dataFilePath}")		
+			raise FileNotFoundError(f"Cannot train without data: {self.dataFilePath}")
+		self.unlabeledDataset: Dataset | None = HSSFLDON_DataLoader().loadDataset(path=self.dataFilePath, split="train")
+		if self.unlabeledDataset is None:
+			self.logger.error(f"Failed to load dataset from path: {self.dataFilePath}")
+			raise ValueError(f"Dataset loading failed for path: {self.dataFilePath}")
 
 		# Begin server loop for configured iterations
 		self.learningIterations: int = int(os.getenv("HSSFLDON_LEARNING_ITERATIONS", 10))
@@ -133,6 +138,19 @@ class HSSFLDON_ServerApplication:
 				self.logger.info(f"Successfully aggregated client updates for iteration {iteration+1}/{self.learningIterations}!")
 			else:
 				self.logger.warning(f"Failed to aggregate client updates for iteration {iteration+1}/{self.learningIterations}!")
+
+			# Active Preparation: Determine finalist datapoints to send to clients
+			self.enterState(HSSFLDON_ServerState.ACTIVE_LEARNING)
+			self.logger.info(f"Preparing for active learning for iteration {iteration+1}/{self.learningIterations}!")
+			probabilities, _ = modelManager.predict(
+				dataLoader=self.unlabeledDataset,
+				outputType=HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION
+			)
+			activeDataloader = self.unlabeledDataset.add_column("probabilities", probabilities)
+			finalistDataloader = self._getFinalistDatapointsForActiveLearning(
+				dataLoader=activeDataloader,
+				confidenceThreshold = float(os.getenv("HSSFLDON_ACTIVE_LEARNING_CONFIDENCE", 0.5))
+			)
 
 	def launchApi(self) -> bool:
 		"""
@@ -218,3 +236,6 @@ class HSSFLDON_ServerApplication:
 
 		# Load the averaged state dict into the global model
 		return avgStateDict
+	
+	def _getFinalistDatapointsForActiveLearning(self, dataLoader: DataLoader, confidenceThreshold: float):
+		pass
