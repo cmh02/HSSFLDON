@@ -11,6 +11,7 @@
 
 # Library Imports
 import anyio
+import torch
 from typing import Optional, TYPE_CHECKING
 from fastapi import APIRouter, Request, status, Depends
 from pydantic import BaseModel, Field
@@ -151,3 +152,35 @@ async def submitClientEvaluation(request: Request, payload: SubmitEvaluationRequ
     server_app.logger.info(f"Received evaluation results from client {payload.client_id}: {payload.evaluation_results}")
 
     return SubmitEvaluationResponse(status="ok", message=f"Client {payload.client_id} evaluation submitted successfully!")
+
+class GetActiveDatapointsRequest(BaseModel):
+    """
+    Request model for fetching active datapoints for a client.
+    """
+    client_id: int = Field(..., gte=0, description="Unique identifier for the client") # type: ignore
+
+class GetActiveDatapointsResponse(BaseModel):
+    """
+    Response model for fetching active datapoint for a client.
+    """
+    status: str = Field(..., description="Status of the request")
+    message: str = Field(..., description="Additional information about the request result")
+    datapoint: str = Field(None, description="A text to be labeled by the client")
+
+@HSSFLDON_ServerAPIRouter.get("/active_datapoint", response_model=GetActiveDatapointsResponse, status_code=status.HTTP_200_OK, tags=["Client Management"])
+async def getActiveDatapoint(request: Request, payload: GetActiveDatapointsRequest = Depends()):
+    """
+    API Endpoint: /active_datapoint
+    Method: GET
+    Description: Fetch an active datapoint for a client to label.
+    """
+    # Access the server application instance
+    server_app: "HSSFLDON_ServerApplication" = request.app.state.server_app
+
+    # Get active datapoint for client
+    datapoint = server_app.clientActiveLearningDatapointCache.get(payload.client_id, None)
+
+    if datapoint is not None:
+        return GetActiveDatapointsResponse(status="ok", message=f"Active datapoint for client {payload.client_id} fetched successfully!", datapoint=datapoint)
+    else:
+        return GetActiveDatapointsResponse(status="ok", message=f"No active datapoints available for client {payload.client_id} at this time.", datapoint=None)
