@@ -31,7 +31,12 @@ class HSSFLDON_ClassifierHead(torch.nn.Module):
 	def forward(self, **kwargs):
 		out = self.base(**kwargs)
 		pooled = out.last_hidden_state[:,0]
-		return self.head(pooled)
+		headOut = self.head(pooled)
+
+		# If we wanted hidden states, also output
+		if kwargs.get("output_hidden_states", False):
+			return headOut, out.hidden_states
+		return headOut
 
 class HSSFLDON_ModelManager:
 	"""
@@ -302,6 +307,7 @@ class HSSFLDON_ModelManager:
 		
 		else:
 			self.logger.error(f"Unexpected model output format `type: {type(outputs)}` during predict()!")
+			self.logger.debug(f"---> Model output: {outputs}")
 			raise ValueError("Unexpected model output format.")
 
 		# Return logits and labels
