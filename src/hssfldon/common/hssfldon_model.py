@@ -480,7 +480,8 @@ class HSSFLDON_ModelManager:
 			def __getitem__(self, idx):
 				enc = self.tokenizer(self.texts[idx], truncation=True, max_length=self.max_length, padding="max_length", return_tensors="pt")
 				item = {k: v.squeeze(0) for k, v in enc.items()}
-				item["labels"] = torch.tensor(self.labels[idx], dtype=torch.long)
+				if labels is not None:
+					item["labels"] = torch.tensor(self.labels[idx], dtype=torch.long)
 				return item
 		ds = _SimpleDS(self.tokenizer, texts, labels, max_length)
 		return DataLoader(ds, batch_size=batch_size, shuffle=shuffle, collate_fn=None)
