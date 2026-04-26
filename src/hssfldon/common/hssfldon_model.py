@@ -46,6 +46,9 @@ class HSSFLDON_ModelManager:
 		# Get logger
 		self.logger: HSSFLDON_Logger = HSSFLDON_Logger(name=f"ModelManager")
 
+		# Determine device
+		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 		# Get needed values from env
 		self.modelDirectory: str = os.getenv("HSSFLDON_MODEL_DIRECTORY", "models")
 		self.modelId: str = os.getenv("HSSFLDON_MODEL_ID", "microsoft/deberta-v3-small")
@@ -74,11 +77,11 @@ class HSSFLDON_ModelManager:
 		self.tokenizer = self.loadTokenizer(name=f"tokenizer.pt")
 
 		# Save for reuse
-		self.saveClassificationHead(name=f"classification_head_{customHeadIdentifier}.pt")
-		self.saveBaseModel(name=f"pytorch_model.bin")
-		self.saveTokenizer(name=f"tokenizer.pt")
+		self.saveClassificationHead(head=self.component_head, name=f"classification_head_{customHeadIdentifier}.pt")
+		self.saveBaseModel(model=self.component_base, name=f"pytorch_model.bin")
+		self.saveTokenizer(tokenizer=self.tokenizer, name=f"tokenizer.pt")
 
-	def loadBaseModel(self, name: str = "pytorch_model.bin"):
+	def loadBaseModel(self, name: str = "pytorch_model.bin") -> Any:
 		"""
 		Load the (frozen) base model from file or HF if needed.
 		"""
@@ -102,17 +105,21 @@ class HSSFLDON_ModelManager:
 		self.logger.info(f"Base model parameters frozen. Only the classification head will be trainable.")
 
 		# Determine available device and move model if needed
-		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 		base_model.to(self.device)
 		self.logger.info(f"Base model loaded and moved to device: {self.device}")
 
 		# Return
 		return base_model
 
-	def saveBaseModel(self, name: str = "pytorch_model.bin"):
+	def saveBaseModel(self, model: Any, name: str = "pytorch_model.bin"):
 		"""
 		Save the (frozen) base model to file.
 		"""
+
+		# Make sure model is given
+		if model is None:
+			self.logger.error(f"No model provided to saveBaseModel()!")
+			return
 
 		# Make full file name for file
 		modelFile_base: str = os.path.join(self.modelPath_base, name)
@@ -120,22 +127,17 @@ class HSSFLDON_ModelManager:
 		# Make sure directory exists for model components
 		os.makedirs(self.modelPath_base, exist_ok=True)
 
-		# If base not loaded, try to load it first (this will also set tokenizer)
-		if not hasattr(self, "base_model"):
-			self.logger.warning("Base model not loaded; calling loadBaseModel() before saving.")
-			self.base_model = self.loadBaseModel(name=name)
-
 		# Save the base model using transformers' save_pretrained when available
 		try:
 			try:
-				self.base_model.save_pretrained(self.modelPath_base)
+				model.save_pretrained(self.modelPath_base)
 			except Exception as e:
-				torch.save(self.base_model.state_dict(), modelFile_base)
+				torch.save(model.state_dict(), modelFile_base)
 			self.logger.info(f"Base model saved to {modelFile_base}")
 		except Exception as e:
 			self.logger.error(f"Failed to save base model to {modelFile_base}: {e}")
 
-	def loadTokenizer(self, name: str = "tokenizer.pt"):
+	def loadTokenizer(self, name: str = "tokenizer.pt") -> Any:
 		"""
 		Load the tokenizer from file or HF if needed.
 		"""
@@ -157,10 +159,15 @@ class HSSFLDON_ModelManager:
 		# Return
 		return tokenizer
 
-	def saveTokenizer(self, name: str = "tokenizer.pt"):
+	def saveTokenizer(self, tokenizer: Any, name: str = "tokenizer.pt"):
 		"""
 		Save the tokenizer to file.
 		"""
+
+		# Make sure tokenizer is given
+		if tokenizer is None:
+			self.logger.error(f"No tokenizer provided to saveTokenizer()!")
+			return
 
 		# Make full file name for file
 		modelFile_tokenizer: str = os.path.join(self.modelPath_tokenizer, name)
@@ -168,22 +175,17 @@ class HSSFLDON_ModelManager:
 		# Make sure directory exists for model components
 		os.makedirs(self.modelPath_tokenizer, exist_ok=True)
 
-		# If tokenizer not loaded, try to load it first (this will also set base_model)
-		if not hasattr(self, "tokenizer"):
-			self.logger.warning("Tokenizer not loaded; calling loadTokenizer() before saving.")
-			self.tokenizer = self.loadTokenizer(name=name)
-
 		# Save the tokenizer using transformers' save_pretrained when available
 		try:
-			if hasattr(self.tokenizer, "save_pretrained"):
-				self.tokenizer.save_pretrained(self.modelPath_tokenizer)
+			if hasattr(tokenizer, "save_pretrained"):
+				tokenizer.save_pretrained(self.modelPath_tokenizer)
 			else:
-				torch.save(self.tokenizer, modelFile_tokenizer)
+				torch.save(tokenizer, modelFile_tokenizer)
 			self.logger.info(f"Tokenizer saved to {modelFile_tokenizer}")
 		except Exception as e:
 			self.logger.error(f"Failed to save tokenizer to {modelFile_tokenizer}: {e}")
 
-	def loadClassificationHead(self, name: str = "classification_head.pt"):
+	def loadClassificationHead(self, name: str = "classification_head.pt") -> nn.Module:
 		"""
 		Load the (trainable) classification head from file or create a new one if needed.
 		"""
@@ -218,9 +220,6 @@ class HSSFLDON_ModelManager:
 		except StopIteration:
 			base_dtype = torch.float16
 
-		# Save to class
-		self.classification_head = head
-
 		# Send to device
 		head.to(self.device, dtype=base_dtype)
 
@@ -229,10 +228,15 @@ class HSSFLDON_ModelManager:
 			param.requires_grad = True
 		return head
 
-	def saveClassificationHead(self, name: str = "classification_head.pt"):
+	def saveClassificationHead(self, head: nn.Module, name: str = "classification_head.pt"):
 		"""
 		Save the (trainable) classification head to file.
 		"""
+
+		# Make sure head is given
+		if head is None:
+			self.logger.error(f"No classification head provided to saveClassificationHead()!")
+			return
 
 		# Make full file name for file
 		modelFile_head: str = os.path.join(self.modelPath_head, name)
@@ -240,14 +244,9 @@ class HSSFLDON_ModelManager:
 		# Make sure directory exists for model components
 		os.makedirs(self.modelPath_head, exist_ok=True)
 
-		# If classification head not loaded, try to load it first
-		if not hasattr(self, "classification_head"):
-			self.logger.warning("Classification head not loaded; calling loadClassificationHead() before saving.")
-			self.classification_head = self.loadClassificationHead(name=name)
-
 		# Save the classification head
 		try:
-			torch.save(self.classification_head.state_dict(), modelFile_head)
+			torch.save(head.state_dict(), modelFile_head)
 			self.logger.info(f"Classification head saved to {modelFile_head}")
 		except Exception as e:
 			self.logger.error(f"Failed to save classification head to {modelFile_head}: {e}")
