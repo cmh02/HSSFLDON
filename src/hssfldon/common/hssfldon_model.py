@@ -50,7 +50,7 @@ class HSSFLDON_ModelManager:
 			print(f"Warning: .env file not found or failed to load. Make sure to create a .env file with the necessary configuration variables!")
 			
 		# Get logger
-		self.logger: HSSFLDON_Logger = HSSFLDON_Logger(name=f"ModelManager")
+		self.logger: HSSFLDON_Logger = HSSFLDON_Logger(name=f"ModelManager {os.getpid()}")
 		self.logger.debug(f"Initialized Model Manager with PID {os.getpid()}!")
 
 		# Determine device
