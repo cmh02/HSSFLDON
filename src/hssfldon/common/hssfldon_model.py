@@ -51,6 +51,7 @@ class HSSFLDON_ModelManager:
 			
 		# Get logger
 		self.logger: HSSFLDON_Logger = HSSFLDON_Logger(name=f"ModelManager")
+		self.logger.debug(f"Initialized Model Manager with PID {os.getpid()}!")
 
 		# Determine device
 		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
