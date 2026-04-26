@@ -223,6 +223,17 @@ class HSSFLDON_ServerApplication:
 			for clientId in self.clientActiveLearningDatapointCache.keys():
 				self.clientActiveLearningDatapointCache[clientId] = None
 
+			# Active Aggregation: Aggregate client updates into global model for active learning
+			self.enterState(HSSFLDON_ServerState.AGGREGATING)
+			self.logger.info(f"Aggregating client updates for iteration {iteration+1}/{self.learningIterations}!")
+			avgStateDict = self._fedAverageClientUpdates(modelManager=modelManager, clientHeadPaths=self.clientHeadPathCache)
+			if avgStateDict is not None:
+				modelManager.component_head.load_state_dict(avgStateDict)
+				modelManager.saveClassificationHead(head=modelManager.component_head, name=f"classification_head_global.pt")
+				self.logger.info(f"Successfully aggregated client updates for iteration {iteration+1}/{self.learningIterations}!")
+			else:
+				self.logger.warning(f"Failed to aggregate client updates for iteration {iteration+1}/{self.learningIterations}!")	
+
 
 	def launchApi(self) -> bool:
 		"""
