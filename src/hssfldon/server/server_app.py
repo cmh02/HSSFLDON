@@ -183,10 +183,10 @@ class HSSFLDON_ServerApplication:
 				outputType=HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION
 			)
 			self.logger.info(f"Calculated probabilities for unlabeled dataset for iteration {iteration+1}/{self.learningIterations}!")
-			activeDataloader = self.unlabeledDataloader.dataset.add_column("probabilities", probabilities)
+			activeDataSet = self.unlabeledDataloader.dataset.add_column("probabilities", probabilities)
 			finalistDataloader = self._getFinalistDatapointsForActiveLearning(
 				modelManager=modelManager,
-				dataLoader=activeDataloader,
+				dataset=activeDataSet,
 				confidenceThreshold = float(os.getenv("HSSFLDON_ACTIVE_LEARNING_CONFIDENCE", 0.5)),
 				numFinalists=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_FINALISTS", 10)),
 				numCentroids=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_CENTROIDS", 5))
@@ -320,7 +320,7 @@ class HSSFLDON_ServerApplication:
 		# Load the averaged state dict into the global model
 		return avgStateDict
 	
-	def _getFinalistDatapointsForActiveLearning(self, modelManager: HSSFLDON_ModelManager, dataLoader: DataLoader, confidenceThreshold: float, numFinalists: int, numCentroids: int) -> DataLoader:
+	def _getFinalistDatapointsForActiveLearning(self, modelManager: HSSFLDON_ModelManager, dataset: Dataset, confidenceThreshold: float, numFinalists: int, numCentroids: int) -> DataLoader:
 		"""
 		Get the finalist datapoints to send to clients for active learning based on confidence threshold.
 
@@ -334,7 +334,7 @@ class HSSFLDON_ServerApplication:
 		# Get confident vs unconfident datapoints based on confidence threshold
 		confidentDatapoints = []
 		unconfidentDatapoints = []
-		for datapoint in dataLoader:
+		for datapoint in dataset:
 			if torch.max(datapoint["probabilities"]) >= confidenceThreshold:
 				confidentDatapoints.append(datapoint)
 			else:
