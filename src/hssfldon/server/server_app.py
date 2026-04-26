@@ -172,7 +172,7 @@ class HSSFLDON_ServerApplication:
 				outputType=HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION
 			)
 			self.logger.info(f"Calculated probabilities for unlabeled dataset for iteration {iteration+1}/{self.learningIterations}!")
-			activeDataloader = self.unlabeledDataloader.add_column("probabilities", probabilities)
+			activeDataloader = self.unlabeledDataloader.dataset.add_column("probabilities", probabilities)
 			finalistDataloader = self._getFinalistDatapointsForActiveLearning(
 				dataLoader=activeDataloader,
 				confidenceThreshold = float(os.getenv("HSSFLDON_ACTIVE_LEARNING_CONFIDENCE", 0.5)),
