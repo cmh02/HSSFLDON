@@ -318,7 +318,6 @@ class HSSFLDON_ModelManager:
 			# Iterate over training data
 			lossFunction = torch.nn.BCEWithLogitsLoss()
 			for i, batch in enumerate(trainingDataLoader, 1):
-				self.logger.debug(f"Processing batch {i} / {len(trainingDataLoader)} for epoch {epoch}/{epochs}!")
 
 				# Forward pass
 				logits, labels = self._forwardPass(batch)
@@ -348,13 +347,21 @@ class HSSFLDON_ModelManager:
 				predictions = (probabilities > 0.5).to(batch["labels"].dtype)
 
 				# Track epoch stats
-				epochStats_loss += loss.item() * batch["labels"].size(0)
-				epochStats_correct += (predictions == batch["labels"]).sum().item()
-				epochStats_total += batch["labels"].size(0)
+				batchStats_loss = loss.item() * batch["labels"].size(0)
+				batchStats_correct = (predictions == batch["labels"]).sum().item()
+				batchStats_total = batch["labels"].size(0)
+				batchStats_lossAverage = batchStats_loss / batchStats_total
+				batchStats_accuracy = batchStats_correct / batchStats_total
+				epochStats_loss += batchStats_loss
+				epochStats_correct += batchStats_correct
+				epochStats_total += batchStats_total
+				epochStats_lossAverage = epochStats_loss / epochStats_total
+				epochStats_accuracy = epochStats_correct / epochStats_total
 
-			# Calculate average loss and accuracy for the epoch
-			epochStats_lossAverage = epochStats_loss / epochStats_total
-			epochStats_accuracy = epochStats_correct / epochStats_total
+				# Log
+				self.logger.debug(f"Processed batch {i} / {len(trainingDataLoader)} for epoch {epoch}/{epochs}! Batch loss: {batchStats_lossAverage:.4f}, Batch accuracy: {batchStats_accuracy:.4f}, Epoch loss: {epochStats_lossAverage:.4f}, Epoch accuracy: {epochStats_accuracy:.4f}")
+
+			# Save epoch stats to history
 			epochHistory[epoch] = {"train": {}, "validation": {}}
 			epochHistory[epoch]["train"]["loss"] = epochStats_lossAverage
 			epochHistory[epoch]["train"]["accuracy"] = epochStats_accuracy
