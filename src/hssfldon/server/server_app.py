@@ -78,9 +78,9 @@ class HSSFLDON_ServerApplication:
 		# Setup model
 		self.modelName: str = os.getenv("HSSFLDON_MODEL_NAME", "bert-base-uncased")
 		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
-		modelManager.saveBaseModel(name = "pytorch_model.bin")
-		modelManager.saveTokenizer(name = "tokenizer.pt")
-		modelManager.saveClassificationHead(name = "classification_head_global.pt")
+		modelManager.saveBaseModel(model=modelManager.component_base, name = "pytorch_model.bin")
+		modelManager.saveTokenizer(tokenizer=modelManager.tokenizer, name = "tokenizer.pt")
+		modelManager.saveClassificationHead(head=modelManager.component_head, name = "classification_head_global.pt")
 
 		# Setup data directory for server unlabeled data
 		self.dataDirectory: str = os.getenv("HSSFLDON_CLIENT_DATA_DIRECTORY", "data")
@@ -104,8 +104,9 @@ class HSSFLDON_ServerApplication:
 		for iteration in range(self.learningIterations):
 			self.logger.info(f"Starting learning iteration {iteration+1}/{self.learningIterations}!")
 
-			# Passive Learning: Assign datapoint to each client and wait for update
+			# Passive Learning: Tell clients to perform passive learning
 			self.enterState(HSSFLDON_ServerState.PASSIVE_LEARNING)
+			self.logger.info(f"Performing passive learning for iteration {iteration+1}/{self.learningIterations}!")
 			for clientId in self.clients:
 
 				# Assign passive learning task to client
@@ -121,20 +122,10 @@ class HSSFLDON_ServerApplication:
 				self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
 				self.logger.debug(f"Received update from client {clientId} and set to standby!")
 
-			# # Passive Aggregation: Aggregate client updates into global model for passive learning
-			# self.enterState(HSSFLDON_ServerState.AGGREGATING)
-			# clientAdaptersToMerge: list[str] = []
-			# for clientId in self.clients:
-			# 	clientAdapterPath: str | None = self.clientAdapterPathCache[clientId]
-			# 	if clientAdapterPath is None:
-			# 		self.logger.warning(f"No adapter path found for client {clientId} during aggregation! Skipping client update.")
-			# 		continue
-			# 	clientAdaptersToMerge.append(clientAdapterPath)
-			# if len(clientAdaptersToMerge) > 0:
-			# 	#TODO: aggregate model heads
-			# 	self.logger.info(f"Completed aggregation for iteration {iteration+1} passive learning!")
-			# else:
-			# 	self.logger.warning(f"No client adapters found to aggregate for iteration {iteration+1} passive learning! Skipping aggregation step.")
+			# Passive Aggregation: Aggregate client updates into global model for passive learning
+			self.enterState(HSSFLDON_ServerState.AGGREGATING)
+			self.logger.info(f"Aggregating client updates for iteration {iteration+1}/{self.learningIterations}!")
+
 
 	def launchApi(self) -> bool:
 		"""
@@ -178,3 +169,26 @@ class HSSFLDON_ServerApplication:
 		self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
 		self.clientUpdateStatus[clientId] = False
 		self.clientHeadPathCache[clientId] = None
+
+	def _fedAverageClientUpdates(self, clientHeadPaths: dict[int, str]) -> None:
+		"""
+		Perform federated averaging on the client updates to create a new global model.
+
+		Args:
+			clientHeadPaths (dict[int, str]): A dictionary mapping client IDs to their classification head file paths.
+		"""
+		self.logger.debug(f"Performing federated averaging on client updates: {clientHeadPaths}!")
+
+		# Load each client head and perform averaging
+		clientStateDicts = {}
+		for clientId, headPath in clientHeadPaths.items():
+			if headPath is None:
+				self.logger.warning(f"Client {clientId} does not have a valid head path for aggregation. Skipping!")
+				continue
+
+			try:
+				
+				clientStateDict = torch.load(headPath, map_location='cpu', weights_only=True)
+			except Exception as e:
+				self.logger.error(f"Error loading classification head from client {clientId} at path `{headPath}`: {e}")
+				continue
