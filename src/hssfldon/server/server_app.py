@@ -56,25 +56,36 @@ class HSSFLDON_ServerApplication:
 		self.clientTasks: dict[int, HSSFLDON_ClientTask] = {}
 		self.clientUpdateStatus: dict[int, bool] = {}
 		self.clientHeadPathCache: dict[int, str | None] = {}
+		self.clientActiveLearningDatapointCache: dict[int, dict] = {}
+
+		# Initialize model evaluation tracking {learning_iteration: {passive_or_active: {metric_name: metric_value}}}}
+		self.modelEvaluationHistory: dict[int, dict[str, dict[str, float]]] = {}
 
 		# Intialize index-category mapping
-		self.indexCategoryMapping: dict[int, str] = {}
-		self.indexCategoryMapping[0] = "sentiment"
-		self.indexCategoryMapping[1] = "respect"
-		self.indexCategoryMapping[2] = "insult"
-		self.indexCategoryMapping[3] = "humiliate"
-		self.indexCategoryMapping[4] = "status"
-		self.indexCategoryMapping[5] = "dehumanize"
-		self.indexCategoryMapping[6] = "violence"
-		self.indexCategoryMapping[7] = "genocide"
-		self.indexCategoryMapping[9] = "attack_defend"
-		self.indexCategoryMapping[10] = "hatespeech"
+		self.indexToCategoryMapping: dict[int, str] = {}
+		self.indexToCategoryMapping[0] = "sentiment"
+		self.indexToCategoryMapping[1] = "respect"
+		self.indexToCategoryMapping[2] = "insult"
+		self.indexToCategoryMapping[3] = "humiliate"
+		self.indexToCategoryMapping[4] = "status"
+		self.indexToCategoryMapping[5] = "dehumanize"
+		self.indexToCategoryMapping[6] = "violence"
+		self.indexToCategoryMapping[7] = "genocide"
+		self.indexToCategoryMapping[9] = "attack_defend"
+		self.indexToCategoryMapping[10] = "hatespeech"
+		self.categoryToIndexMapping: dict[str, int] = {v: k for k, v in self.indexToCategoryMapping.items()}
 
-		# Initialize client oracle mapping
-		self.clientOracleMapping: dict[int, list[int]] = {}
-		self.clientOracleMapping[0] = [2, 5, 6]
-		self.clientOracleMapping[1] = [7, 9, 1]
-		self.clientOracleMapping[2] = [0, 3, 10]
+		# Initialize category oracle mapping
+		self.categoryToOracleMapping: dict[int, list[int]] = {}
+		self.categoryToOracleMapping[0] = [2, 5, 6]
+		self.categoryToOracleMapping[1] = [7, 9, 1]
+		self.categoryToOracleMapping[2] = [0, 3, 10]
+		self.oracleToCategoryMapping: dict[int, int] = {}
+		for clientId, oracleCategories in self.categoryToOracleMapping.items():
+			for categoryIndex in oracleCategories:
+				self.oracleToCategoryMapping[categoryIndex] = clientId
+
+		# Initialize 
 
 		# Setup API
 		self.api_host = os.getenv("HSSFLDON_SERVER_HOST", "127.0.0.1")
@@ -135,34 +146,34 @@ class HSSFLDON_ServerApplication:
 			self.logger.info(f"Starting learning iteration {iteration+1}/{self.learningIterations}!")
 			modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
 
-			# # Passive Learning: Tell clients to perform passive learning
-			# self.enterState(HSSFLDON_ServerState.PASSIVE_LEARNING)
-			# self.logger.info(f"Performing passive learning for iteration {iteration+1}/{self.learningIterations}!")
-			# for clientId in self.clients:
+			# Passive Learning: Tell clients to perform passive learning
+			self.enterState(HSSFLDON_ServerState.PASSIVE_LEARNING)
+			self.logger.info(f"Performing passive learning for iteration {iteration+1}/{self.learningIterations}!")
+			for clientId in self.clients:
 
-			# 	# Assign passive learning task to client
-			# 	self.clientTasks[clientId] = HSSFLDON_ClientTask.DO_PASSIVE_LEARNING
-			# 	self.clientUpdateStatus[clientId] = False
+				# Assign passive learning task to client
+				self.clientTasks[clientId] = HSSFLDON_ClientTask.DO_PASSIVE_LEARNING
+				self.clientUpdateStatus[clientId] = False
 
-			# 	# Wait for client update
-			# 	self.logger.debug(f"Waiting for update from client {clientId}!")
-			# 	while not self.clientUpdateStatus[clientId]:
-			# 		time.sleep(1)
+				# Wait for client update
+				self.logger.debug(f"Waiting for update from client {clientId}!")
+				while not self.clientUpdateStatus[clientId]:
+					time.sleep(1)
 
-			# 	# Tell client to standby until next iteration
-			# 	self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
-			# 	self.logger.debug(f"Received update from client {clientId} and set to standby!")
+				# Tell client to standby until next iteration
+				self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
+				self.logger.debug(f"Received update from client {clientId} and set to standby!")
 
-			# # Passive Aggregation: Aggregate client updates into global model for passive learning
-			# self.enterState(HSSFLDON_ServerState.AGGREGATING)
-			# self.logger.info(f"Aggregating client updates for iteration {iteration+1}/{self.learningIterations}!")
-			# avgStateDict = self._fedAverageClientUpdates(modelManager=modelManager, clientHeadPaths=self.clientHeadPathCache)
-			# if avgStateDict is not None:
-			# 	modelManager.component_head.load_state_dict(avgStateDict)
-			# 	modelManager.saveClassificationHead(head=modelManager.component_head, name=f"classification_head_global.pt")
-			# 	self.logger.info(f"Successfully aggregated client updates for iteration {iteration+1}/{self.learningIterations}!")
-			# else:
-			# 	self.logger.warning(f"Failed to aggregate client updates for iteration {iteration+1}/{self.learningIterations}!")
+			# Passive Aggregation: Aggregate client updates into global model for passive learning
+			self.enterState(HSSFLDON_ServerState.AGGREGATING)
+			self.logger.info(f"Aggregating client updates for iteration {iteration+1}/{self.learningIterations}!")
+			avgStateDict = self._fedAverageClientUpdates(modelManager=modelManager, clientHeadPaths=self.clientHeadPathCache)
+			if avgStateDict is not None:
+				modelManager.component_head.load_state_dict(avgStateDict)
+				modelManager.saveClassificationHead(head=modelManager.component_head, name=f"classification_head_global.pt")
+				self.logger.info(f"Successfully aggregated client updates for iteration {iteration+1}/{self.learningIterations}!")
+			else:
+				self.logger.warning(f"Failed to aggregate client updates for iteration {iteration+1}/{self.learningIterations}!")
 
 			# Active Preparation: Determine finalist datapoints to send to clients
 			self.enterState(HSSFLDON_ServerState.ACTIVE_LEARNING)
@@ -182,10 +193,36 @@ class HSSFLDON_ServerApplication:
 			)
 			self.logger.info(f"Selected finalist datapoints for active learning for iteration {iteration+1}/{self.learningIterations}!")
 
-			# For now, print off finalist datapoitns
-			self.logger.info(f"Finalist datapoints for active learning in iteration {iteration+1}/{self.learningIterations}:")
+			# Active Assignment: Determine which clients are best for each data point based on oracle mapping
 			for datapoint in finalistDataloader:
-				self.logger.info(f"Datapoint: {datapoint}")
+				maxCategoryIndex = torch.argmax(datapoint["probabilities"]).item()
+				oracleId = self.oracleToCategoryMapping.get(maxCategoryIndex)
+				if self.clientActiveLearningDatapointCache.get(oracleId) is None:
+					self.clientActiveLearningDatapointCache[oracleId] = datapoint
+					self.logger.info(f"Assigned active learning datapoint to client {oracleId} based on oracle mapping for category index {maxCategoryIndex}!")
+				else:
+					self.logger.info(f"Client {oracleId} already has an active learning datapoint assigned, skipping additional datapoint assignment for category index {maxCategoryIndex}!")
+
+			# Active Learning: Tell clients to perform active learning with assigned datapoints
+			for clientId in self.clients:
+
+				# Assign active learning task to client
+				self.clientTasks[clientId] = HSSFLDON_ClientTask.DO_ACTIVE_LEARNING
+				self.clientUpdateStatus[clientId] = False
+
+				# Wait for client update
+				self.logger.debug(f"Waiting for update from client {clientId}!")
+				while not self.clientUpdateStatus[clientId]:
+					time.sleep(1)
+
+				# Tell client to standby until next iteration
+				self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
+				self.logger.debug(f"Received update from client {clientId} and set to standby!")
+
+			# Clear active learning datapoint cache for next iteration
+			for clientId in self.clientActiveLearningDatapointCache.keys():
+				self.clientActiveLearningDatapointCache[clientId] = None
+
 
 	def launchApi(self) -> bool:
 		"""
