@@ -125,7 +125,7 @@ class HSSFLDON_ClientApplication:
 		self.logger.debug(f"Passive learning training history for this round: {epochTrainingHistory}")
 
 		# Save classifier head and submit update to server
-		modelManager.saveClassificationHead(name=f"client_{self.client_id}_head.pt")
+		modelManager.saveClassificationHead(head=modelManager.component_head, name=f"client_{self.client_id}_head.pt")
 		self.submitUpdateToServer(headPath=f"client_{self.client_id}_head.pt")
 
 		# Final info log and cleanup
