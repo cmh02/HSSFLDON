@@ -302,6 +302,10 @@ class HSSFLDON_ServerApplication:
 			self.logger.warning(f"Number of unconfident datapoints ({len(unconfidentDatapoints)}) is less than or equal to the number of finalists requested ({numFinalists})! Returning all unconfident datapoints for active learning finalists!")
 			return DataLoader(unconfidentDatapoints)
 
+		# Turn unconfident and confident datapoints into dataloaders for processing
+		unconfidentDataloader = DataLoader(unconfidentDatapoints, batch_size=32)
+		confidentDataloader = DataLoader(confidentDatapoints, batch_size=32)
+
 		# Get centroids for unconfident datapoints and confident datapoints
 		unconfidentEmbeddings, unconfidentCentroids = self._getEmbeddingsAndCentroids(modelManager=modelManager, dataLoader=unconfidentDataloader, numCentroids=numCentroids)
 		confidentEmbeddings, confidentCentroids = self._getEmbeddingsAndCentroids(modelManager=modelManager, dataLoader=confidentDataloader, numCentroids=numCentroids)
@@ -312,10 +316,6 @@ class HSSFLDON_ServerApplication:
 			
 		for i in range(len(confidentDatapoints)):
 			confidentDatapoints[i]["embeddings"] = confidentEmbeddings[i].cpu()
-
-		# Turn unconfident and confident datapoints into dataloaders for processing
-		unconfidentDataloader = DataLoader(unconfidentDatapoints, batch_size=32)
-		confidentDataloader = DataLoader(confidentDatapoints, batch_size=32)
 
 		# Calculate C-score for each unconfident datapoint
 		unconfidentWithCScores = self._calculateCScores(
