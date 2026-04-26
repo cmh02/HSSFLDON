@@ -286,7 +286,7 @@ class HSSFLDON_ServerApplication:
 		# Get confident vs unconfident datapoints based on confidence threshold
 		confidentDatapoints = []
 		unconfidentDatapoints = []
-		for datapoint in dataLoader.dataset:
+		for datapoint in dataLoader:
 			if torch.max(datapoint["probabilities"]) >= confidenceThreshold:
 				confidentDatapoints.append(datapoint)
 			else:
