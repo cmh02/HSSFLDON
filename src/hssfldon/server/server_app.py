@@ -171,6 +171,7 @@ class HSSFLDON_ServerApplication:
 				dataLoader=self.unlabeledDataloader,
 				outputType=HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION
 			)
+			self.logger.info(f"Calculated probabilities for unlabeled dataset for iteration {iteration+1}/{self.learningIterations}!")
 			activeDataloader = self.unlabeledDataloader.add_column("probabilities", probabilities)
 			finalistDataloader = self._getFinalistDatapointsForActiveLearning(
 				dataLoader=activeDataloader,
@@ -178,6 +179,7 @@ class HSSFLDON_ServerApplication:
 				numFinalists=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_FINALISTS", 10)),
 				numCentroids=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_CENTROIDS", 5))
 			)
+			self.logger.info(f"Selected finalist datapoints for active learning for iteration {iteration+1}/{self.learningIterations}!")
 
 			# For now, print off finalist datapoitns
 			self.logger.info(f"Finalist datapoints for active learning in iteration {iteration+1}/{self.learningIterations}:")
