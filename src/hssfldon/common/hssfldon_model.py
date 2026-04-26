@@ -303,7 +303,7 @@ class HSSFLDON_ModelManager:
 		elif isinstance(outputs, tuple):
 			logits = outputs[0]
 			embeddings = outputs[1][-1][:, 0, :] 
-			self.logger.warning(f"Model output is a tuple, extracting embeddings via index.")
+			self.logger.debug(f"Model output is a tuple, extracting embeddings via index.")
 		
 		else:
 			self.logger.error(f"Unexpected model output format `type: {type(outputs)}` during predict()!")
