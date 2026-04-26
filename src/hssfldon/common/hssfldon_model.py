@@ -195,12 +195,12 @@ class HSSFLDON_ModelManager:
 		
 		# Create classification head
 		head = nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Linear(self.component_base.config.hidden_size, self.component_base.config.hidden_size // 2),
-            nn.GELU(),
-            nn.Dropout(0.2),
-            nn.Linear(self.component_base.config.hidden_size // 2, self.modelNClasses)
-        )
+			nn.Dropout(0.2),
+			nn.Linear(self.component_base.config.hidden_size, self.component_base.config.hidden_size // 2),
+			nn.GELU(),
+			nn.Dropout(0.2),
+			nn.Linear(self.component_base.config.hidden_size // 2, self.modelNClasses)
+		)
 
 		# Check if saved locally, and if so, load state dict
 		if os.path.exists(modelFile_head):
@@ -261,7 +261,7 @@ class HSSFLDON_ModelManager:
 		"""
 		Build an optimizer for the trainable parameters of the model.
 		"""
-		return torch.optim.AdamW(self.getTrainableParameters(), lr=learningRate, weight_decay=weightDecay)
+		return torch.optim.AdamW(self.getTrainableParameters(), lr=learningRate, weight_decay=weightDecay, eps=1e-5)
 	
 	def buildScheduler(self, optimizer, numWarmupSteps: int = 0, numTrainingSteps: int = 1000):
 		"""
@@ -327,6 +327,16 @@ class HSSFLDON_ModelManager:
 				else:
 					labels = torch.tensor(labels, dtype=logits.dtype, device=logits.device)
 
+				# Validate for any potential errors
+				if torch.isnan(labels).any():
+					self.logger.error(f"DATA POISONING: batch['labels'] contains NaN values at batch {i}!")
+				
+				if (labels < 0).any() or (labels > 1).any():
+					self.logger.error(f"DATA OUT OF BOUNDS: labels must be strictly 0 or 1. Found invalid values at batch {i}!")
+
+				if torch.isnan(logits).any():
+					self.logger.error(f"WEIGHT CORRUPTION: Logits are NaN at batch {i}. The weights exploded during the previous backward pass!")
+
 				# Calculate loss
 				loss = lossFunction(logits, labels)
 
@@ -345,12 +355,14 @@ class HSSFLDON_ModelManager:
 				probabilities = torch.sigmoid(logits)
 				predictions = (probabilities > 0.5).to(batch["labels"].dtype)
 
-				# Track epoch stats
-				batchStats_loss = loss.item() * batch["labels"].size(0)
+				# Track batch stats
+				batchStats_total = batch["labels"].numel()
+				batchStats_loss = loss.item() * batchStats_total
 				batchStats_correct = (predictions == batch["labels"]).sum().item()
-				batchStats_total = batch["labels"].size(0)
 				batchStats_lossAverage = batchStats_loss / batchStats_total
 				batchStats_accuracy = batchStats_correct / batchStats_total
+
+				# Track epoch stats
 				epochStats_loss += batchStats_loss
 				epochStats_correct += batchStats_correct
 				epochStats_total += batchStats_total
