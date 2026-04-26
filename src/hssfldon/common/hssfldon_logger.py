@@ -123,6 +123,7 @@ class HSSFLDON_Logger:
 		"""
 		globalLogDirectory: Path = Path(os.getenv("HSSFLDON_LOGDIR", "logs/"))
 		globalLogFilePath: Path = Path.joinpath(globalLogDirectory, 'global.log')
+		os.makedirs(globalLogDirectory, exist_ok=True)
 		handler = logging.FileHandler(globalLogFilePath)
 		handler.setLevel(self.level)
 		handler.setFormatter(self.formatter)
@@ -137,6 +138,7 @@ class HSSFLDON_Logger:
 		"""
 		localLogDirectory: Path = Path(os.getenv("HSSFLDON_LOGDIR", "logs/"))
 		localLogFilePath: Path = Path.joinpath(localLogDirectory, f'{self.name}.log')
+		os.makedirs(localLogDirectory, exist_ok=True)
 		handler = logging.FileHandler(localLogFilePath)
 		handler.setLevel(self.level)
 		handler.setFormatter(self.formatter)
