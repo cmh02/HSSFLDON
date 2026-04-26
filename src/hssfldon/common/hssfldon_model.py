@@ -446,6 +446,7 @@ class HSSFLDON_ModelManager:
 		# Holder for all logits
 		logitsList = []
 		labelsList = []
+		embeddingsList = []
 
 		# Iterate over validation data
 		lossFunction = torch.nn.BCEWithLogitsLoss()
@@ -458,10 +459,12 @@ class HSSFLDON_ModelManager:
 				logitsList.append(logits.cpu())
 				if labels is not None:
 					labelsList.append(labels.cpu())
+				embeddingsList.append(embeddings.cpu())
 
 		# Concatenate all logits
 		logits = torch.cat(logitsList, dim=0) if len(logitsList) > 0 else torch.empty((0, self.modelNClasses))
 		labels = torch.cat(labelsList, dim=0) if len(labelsList) > 0 else torch.empty((0, self.modelNClasses))
+		embeddings = torch.cat(embeddingsList, dim=0) if len(embeddingsList) > 0 else torch.empty((0, self.modelNEmbeddingDim))
 
 		# Process output type
 		if outputType == HSSFLDON_PredictionOutputType.LOGIT_PREDICTION:
