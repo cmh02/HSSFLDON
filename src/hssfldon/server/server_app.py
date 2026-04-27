@@ -210,6 +210,8 @@ class HSSFLDON_ServerApplication:
 				texts = self.unlabeledDataset["text"],
 				labels=None
 			)
+			self.logger.debug(f"First element of unlabeled dataset: {self.unlabeledDataset[0]}")
+			self.logger.debug(f"First element of unlabeled dataloader dataset: {allUnlabeledCandidatesDataloader.dataset[0]}")
 			output, _ = modelManager.predict(
 				dataLoader=allUnlabeledCandidatesDataloader
 			)
@@ -218,6 +220,7 @@ class HSSFLDON_ServerApplication:
 			activeDataSet = activeDataSet.add_column("probabilities", output[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION])
 			activeDataSet = activeDataSet.add_column("embeddings", output[HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION])
 			activeDataloader = DataLoader(activeDataSet, batch_size=32)
+			self.logger.debug(f"First element of active dataloader dataset: {activeDataloader.dataset[0]}")
 			finalistDataloader = self._getFinalistDatapointsForActiveLearning(
 				modelManager=modelManager,
 				dataloader=activeDataloader,
@@ -225,6 +228,7 @@ class HSSFLDON_ServerApplication:
 				numFinalists=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_FINALISTS", 10)),
 				numCentroids=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_CENTROIDS", 5))
 			)
+			self.logger.debug(f"First element of finalist dataloader dataset: {finalistDataloader.dataset[0] if len(finalistDataloader.dataset) > 0 else 'N/A'}")
 			self.logger.info(f"Selected finalist datapoints for active learning for iteration {iteration+1}/{self.learningIterations}!")
 
 			# Verify we have finalist datapoints
