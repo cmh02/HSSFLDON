@@ -15,6 +15,7 @@
 # Library Imports
 import os
 import time
+import json
 from peft import PeftModel
 import torch
 import uvicorn
@@ -130,6 +131,24 @@ class HSSFLDON_ServerApplication:
 			labels=None
 		)
 
+		# Setup test data directory for gloabl testing data
+		self.testDataFilePath: str = os.path.join(self.dataDirectory, f"test/test.parquet")
+		if not os.path.exists(self.testDataFilePath):
+			self.logger.error(f"Test data file missing: {self.testDataFilePath}")
+			raise FileNotFoundError(f"Cannot evaluate without test data: {self.testDataFilePath}")
+		self.testDataset: Dataset | None = HSSFLDON_DataLoader().loadDataset(path=self.testDataFilePath, split="train")
+		if self.testDataset is None:
+			self.logger.error(f"Failed to load test dataset from path: {self.testDataFilePath}")
+			raise ValueError(f"Test dataset loading failed for path: {self.testDataFilePath}")
+		self.testDataloader: torch.utils.data.DataLoader = modelManager.tokenize_and_create_dataloader(
+			texts = self.testDataset["text"],
+			labels = self.testDataset["labels"]
+		)
+
+		# Setup evaluation results directory
+		self.evaluationResultsDirectory: str = os.getenv("HSSFLDON_EVALUATION_RESULTS_DIRECTORY", "results")
+		os.makedirs(self.evaluationResultsDirectory, exist_ok=True)
+
 		# Begin server loop for configured iterations
 		self.learningIterations: int = int(os.getenv("HSSFLDON_LEARNING_ITERATIONS", 10))
 		self.doLearningLoop()
@@ -145,6 +164,7 @@ class HSSFLDON_ServerApplication:
 		for iteration in range(self.learningIterations):
 			self.logger.info(f"Starting learning iteration {iteration+1}/{self.learningIterations}!")
 			modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
+			self.modelEvaluationHistory[iteration+1] = {}
 
 			# Passive Learning: Tell clients to perform passive learning
 			self.enterState(HSSFLDON_ServerState.PASSIVE_LEARNING)
@@ -174,6 +194,18 @@ class HSSFLDON_ServerApplication:
 				self.logger.info(f"Successfully aggregated client updates for iteration {iteration+1}/{self.learningIterations}!")
 			else:
 				self.logger.warning(f"Failed to aggregate client updates for iteration {iteration+1}/{self.learningIterations}!")
+
+			# Evaluate global model on test dataset
+			self.enterState(HSSFLDON_ServerState.EVALUATING)
+			self.logger.info(f"Evaluating global model on test dataset for iteration {iteration+1}/{self.learningIterations}!")
+			testLoss, testAccuracy = modelManager.evaluate(
+				dataLoader=self.testDataloader
+			)
+			self.logger.debug(f"Global evaluation completed after passive learning; Test Loss: {testLoss}, Test Accuracy: {testAccuracy}")
+			self.modelEvaluationHistory[iteration+1]["passive"] = {
+				"loss": testLoss,
+				"accuracy": testAccuracy
+			}
 
 			# Active Preparation: Determine finalist datapoints to send to clients
 			self.enterState(HSSFLDON_ServerState.ACTIVE_LEARNING)
@@ -239,6 +271,23 @@ class HSSFLDON_ServerApplication:
 			else:
 				self.logger.warning(f"Failed to aggregate client updates for iteration {iteration+1}/{self.learningIterations}!")	
 
+			# Evaluate global model on test dataset
+			self.enterState(HSSFLDON_ServerState.EVALUATING)
+			self.logger.info(f"Evaluating global model on test dataset for iteration {iteration+1}/{self.learningIterations}!")
+			testLoss, testAccuracy = modelManager.evaluate(
+				dataLoader=self.testDataloader
+			)
+			self.logger.debug(f"Global evaluation completed after active learning; Test Loss: {testLoss}, Test Accuracy: {testAccuracy}")
+			self.modelEvaluationHistory[iteration+1]["active"] = {
+				"loss": testLoss,
+				"accuracy": testAccuracy
+			}
+		
+		# Save model evaluation history to file after all iterations are complete
+		evaluationHistoryPath = os.path.join(self.evaluationResultsDirectory, f"model_evaluation_history.json")
+		with open(evaluationHistoryPath, "w") as f:
+			json.dump(self.modelEvaluationHistory, f)
+		self.logger.info(f"Saved model evaluation history to {evaluationHistoryPath} after completing all learning iterations!")
 
 	def launchApi(self) -> bool:
 		"""
