@@ -231,7 +231,7 @@ class HSSFLDON_ServerApplication:
 				continue
 
 			# Active Assignment: Determine which clients are best for each data point based on oracle mapping
-			for datapoint in finalistDataloader:
+			for datapoint in finalistDataloader.dataset:
 				maxCategoryIndex = torch.argmax(datapoint["probabilities"]).item()
 				oracleId = self.oracleToCategoryMapping.get(maxCategoryIndex)
 				if self.clientActiveLearningDatapointCache.get(oracleId) is None:
