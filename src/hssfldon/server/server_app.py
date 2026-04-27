@@ -210,12 +210,12 @@ class HSSFLDON_ServerApplication:
 			# Active Preparation: Determine finalist datapoints to send to clients
 			self.enterState(HSSFLDON_ServerState.ACTIVE_LEARNING)
 			self.logger.info(f"Preparing for active learning for iteration {iteration+1}/{self.learningIterations}!")
-			probabilities, _ = modelManager.predict(
-				dataLoader=self.unlabeledDataloader,
-				outputType=HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION
+			output, _ = modelManager.predict(
+				dataLoader=self.unlabeledDataloader
 			)
 			self.logger.info(f"Calculated probabilities for unlabeled dataset for iteration {iteration+1}/{self.learningIterations}!")
-			activeDataSet = self.unlabeledDataloader.dataset.add_column("probabilities", probabilities)
+			activeDataSet = self.unlabeledDataloader.dataset.add_column("probabilities", output[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION])
+			activeDataSet = activeDataSet.add_column("embeddings", output[HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION])
 			finalistDataloader = self._getFinalistDatapointsForActiveLearning(
 				modelManager=modelManager,
 				dataset=activeDataSet,
@@ -410,16 +410,10 @@ class HSSFLDON_ServerApplication:
 		confidentDataloader = DataLoader(confidentDatapoints, batch_size=32)
 
 		# Get centroids for unconfident datapoints and confident datapoints
-		unconfidentEmbeddings, unconfidentCentroids = self._getEmbeddingsAndCentroids(modelManager=modelManager, dataLoader=unconfidentDataloader, numCentroids=numCentroids)
-		for i in range(len(unconfidentDatapoints)):
-			unconfidentDatapoints[i]["embeddings"] = unconfidentEmbeddings[i].cpu()
-		unconfidentDataloader = DataLoader(unconfidentDatapoints, batch_size=32)
+		unconfidentCentroids = self._getCentroids(modelManager=modelManager, dataLoader=unconfidentDataloader, numCentroids=numCentroids)
 		
 		if len(confidentDatapoints) > 0:
-			confidentEmbeddings, confidentCentroids = self._getEmbeddingsAndCentroids(modelManager=modelManager, dataLoader=confidentDataloader, numCentroids=numCentroids)
-			for i in range(len(confidentDatapoints)):
-				confidentDatapoints[i]["embeddings"] = confidentEmbeddings[i].cpu()
-			confidentDataloader = DataLoader(confidentDatapoints, batch_size=32)
+			confidentCentroids = self._getCentroids(modelManager=modelManager, dataLoader=confidentDataloader, numCentroids=numCentroids)
 
 		# Calculate C-score for each unconfident datapoint
 		unconfidentWithCScores = self._calculateCScores(
@@ -437,17 +431,19 @@ class HSSFLDON_ServerApplication:
 		return finalistDataLoader
 
 
-	def _getEmbeddingsAndCentroids(self, modelManager: HSSFLDON_ModelManager, dataLoader: DataLoader, numCentroids: int) -> tuple[torch.Tensor, torch.Tensor]:
+	def _getCentroids(self, modelManager: HSSFLDON_ModelManager, dataLoader: DataLoader, numCentroids: int) -> tuple[torch.Tensor, torch.Tensor]:
 		"""
-		Gets the embeddings and centroids for a given dataloader using KMeans clustering on model embeddings.
+		Gets the centroids for a given dataloader using KMeans clustering on model embeddings.
 		"""
 		self.logger.debug(f"Calculating {numCentroids} centroids for dataloader with {len(dataLoader)} datapoints!")
 
-		# Get embeddings for each datapoint using model
-		embeddings, _ = modelManager.predict(
-			dataLoader=dataLoader,
-			outputType=HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION
-		)
+		# Get all embeddings from dataloader and send to device
+		embeddings = []
+		with torch.no_grad():
+			for batch in dataLoader:
+				batchEmbeddings = batch["embeddings"].to(modelManager.device)
+				embeddings.append(batchEmbeddings)
+		embeddings = torch.cat(embeddings, dim=0)
 
 		# Perform KMeans clustering on embeddings to get centroids
 		kmeans = KMeans(n_clusters=numCentroids, random_state=0)
@@ -455,7 +451,7 @@ class HSSFLDON_ServerApplication:
 		centroids = kmeans.cluster_centers_
 
 		# Return centroids
-		return embeddings, torch.from_numpy(centroids)
+		return torch.from_numpy(centroids)
 	
 	def _calculateCScores(self, modelManager: HSSFLDON_ModelManager, unconfidentDataLoader: DataLoader, unconfidentCentroids: torch.Tensor, confidentCentroids: torch.Tensor) -> DataLoader:
 		"""
