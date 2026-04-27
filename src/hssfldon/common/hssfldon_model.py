@@ -421,7 +421,7 @@ class HSSFLDON_ModelManager:
 
 				# Forward pass
 				logits, labels, embeddings = self._forwardPass(batch)
-				loss = lossFunction(logits, labels)
+				loss = lossFunction(logits, labels.to(logits.dtype))
 
 				# Calculate probabilities and predictions
 				probabilities = torch.sigmoid(logits)
