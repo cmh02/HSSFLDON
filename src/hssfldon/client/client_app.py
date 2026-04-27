@@ -24,7 +24,7 @@ from datasets import load_dataset, Dataset
 from hssfldon.common.hssfldon_data import HSSFLDON_DataLoader
 from hssfldon.common.hssfldon_logger import HSSFLDON_Logger, HSSFLDON_TrainerCallbackLogger
 from hssfldon.common.hssfldon_model import HSSFLDON_ModelManager
-from hssfldon.common.hssfldon_enum import HSSFLDON_ClientState, HSSFLDON_ClientTask
+from hssfldon.common.hssfldon_enum import HSSFLDON_ClientState, HSSFLDON_ClientTask, HSSFLDON_PredictionOutputType
 
 
 class HSSFLDON_ClientApplication:
@@ -164,6 +164,16 @@ class HSSFLDON_ClientApplication:
 		dataloader: torch.utils.data.DataLoader = modelManager.tokenize_and_create_dataloader(
 			texts = [text],
 			labels = None
+		)
+
+		# Predict labels
+		output, _ = modelManager.predict(dataloader)
+		predictedLabel = output[HSSFLDON_PredictionOutputType.BINARY_PREDICTION][0]
+
+		# Prepare final dataloader with predicted label and embedding for training
+		dataloader: torch.utils.data.DataLoader = modelManager.tokenize_and_create_dataloader(
+			texts = [text],
+			labels = [predictedLabel]
 		)
 
 		# Train model on datapoint
