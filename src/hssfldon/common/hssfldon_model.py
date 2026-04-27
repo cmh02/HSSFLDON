@@ -288,7 +288,6 @@ class HSSFLDON_ModelManager:
 		labels = batch.get("labels", None)
 		if labels is not None:
 			labels = labels.to(self.device)
-			self.logger.debug(f"Labels found in batch; moved to device: {self.device}")
 		
 		# Forward pass through model
 		outputs = self.model(
