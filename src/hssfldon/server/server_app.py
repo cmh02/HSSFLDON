@@ -249,6 +249,11 @@ class HSSFLDON_ServerApplication:
 			# Active Learning: Tell clients to perform active learning with assigned datapoints
 			for clientId in self.clients:
 
+				# Make sure client will have a datapoint
+				if self.clientActiveLearningDatapointCache.get(clientId) is None:
+					self.logger.info(f"No active learning datapoint assigned to client {clientId} for iteration {iteration+1}/{self.learningIterations}, skipping active learning task assignment for this client!")
+					continue
+
 				# Assign active learning task to client
 				self.clientTasks[clientId] = HSSFLDON_ClientTask.DO_ACTIVE_LEARNING
 				self.clientUpdateStatus[clientId] = False
