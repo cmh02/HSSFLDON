@@ -78,14 +78,14 @@ class HSSFLDON_PredictionOutputType(Enum):
     Enum for the different types of prediction outputs that can be returned by HSSFLDON clients.
     """
 
-    # Output type for a client to return a binary prediction for each category
+    # Binary output
     BINARY_PREDICTION = 0
 
-    # Output type for a client to return a probability for each category
+    # Probability output
     PROBABILITY_PREDICTION = 1
 
-    # Output type for a client to return logits for each category
+    # Logit output
     LOGIT_PREDICTION = 2
 
-    # Output type for a client to return an embedding vector for each datapoint
+    # Embeddings output
     EMBEDDING_PREDICTION = 3
