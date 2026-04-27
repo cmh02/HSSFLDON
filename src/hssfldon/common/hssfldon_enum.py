@@ -27,6 +27,9 @@ class HSSFLDON_ServerState(Enum):
     # State for when server is in active learning mode
     ACTIVE_LEARNING = 11
 
+    # State for when server is evaluating global model
+    EVALUATING = 12
+
 class HSSFLDON_ClientState(Enum):
     """
     Enum for the different states of the HSSFLDON clients.
