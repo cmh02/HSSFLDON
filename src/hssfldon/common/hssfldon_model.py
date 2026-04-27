@@ -9,7 +9,7 @@ import os
 import copy
 import torch
 import torch.nn as nn
-from typing import Tuple, Any
+from typing import Tuple, Any, Dict
 from dotenv import load_dotenv
 from huggingface_hub import login
 from torch.utils.data import DataLoader, Dataset
@@ -440,7 +440,7 @@ class HSSFLDON_ModelManager:
 		self.logger.info(f"Model evaluation completed! Validation Loss: {valStats_lossAverage:.4f}, Validation Accuracy: {valStats_accuracy:.4f}")
 		return valStats_lossAverage, valStats_accuracy
 	
-	def predict(self, dataLoader: DataLoader, outputType: HSSFLDON_PredictionOutputType=HSSFLDON_PredictionOutputType.BINARY_PREDICTION) -> Tuple[torch.Tensor, torch.Tensor]:
+	def predict(self, dataLoader: DataLoader, outputType: HSSFLDON_PredictionOutputType=HSSFLDON_PredictionOutputType.BINARY_PREDICTION) -> Tuple[Dict[HSSFLDON_PredictionOutputType, torch.Tensor], torchTensor]:
 		
 		# Holder for all logits
 		logitsList = []
@@ -466,17 +466,12 @@ class HSSFLDON_ModelManager:
 		embeddings = torch.cat(embeddingsList, dim=0) if len(embeddingsList) > 0 else torch.empty((0, self.component_base.config.hidden_size))
 
 		# Process output type
-		if outputType == HSSFLDON_PredictionOutputType.LOGIT_PREDICTION:
-			return logits, labels
-		elif outputType == HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION:
-			return embeddings, labels
-		elif outputType == HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION:
-			return torch.sigmoid(logits), labels
-		elif outputType == HSSFLDON_PredictionOutputType.BINARY_PREDICTION:
-			return (torch.sigmoid(logits) > 0.5).long(), labels
-		else:
-			self.logger.error(f"Invalid output type specified for predict(): {outputType}. Defaulting to returning logits.")
-			return logits, labels
+		result = {}
+		result[HSSFLDON_PredictionOutputType.LOGIT_PREDICTION] = logits
+		result[HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION] = embeddings
+		result[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION] = torch.sigmoid(logits)
+		result[HSSFLDON_PredictionOutputType.BINARY_PREDICTION] = (torch.sigmoid(logits) > 0.5).long()
+		return result, labels
 	
 	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 16, max_length: int = 256, shuffle: bool = True):
 		class _SimpleDS(Dataset):
