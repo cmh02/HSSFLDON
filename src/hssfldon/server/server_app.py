@@ -396,14 +396,14 @@ class HSSFLDON_ServerApplication:
 		"""
 		self.logger.debug(f"Getting finalist datapoints for active learning with confidence threshold {confidenceThreshold}, num finalists {numFinalists}, and num centroids {numCentroids}!")
 
-		# Get confident vs unconfident datapoints based on confidence threshold
-		confidentDatapoints = []
-		unconfidentDatapoints = []
-		for datapoint in dataloader.dataset:
-			if torch.max(datapoint["probabilities"]) >= confidenceThreshold:
-				confidentDatapoints.append(datapoint)
-			else:
-				unconfidentDatapoints.append(datapoint)
+		# Calculate confidence based on average deviation from rounded probabilities for each class
+		probabilities = torch.stack([dp["probabilities"] for dp in dataloader.dataset])
+		deviations = torch.mean(torch.abs(probabilities - torch.round(probabilities)), dim=1)
+		mask_isConfident = deviations <= confidenceThreshold
+
+		# Separate confident and unconfident datapoints
+		confidentDatapoints = [dp for dp, conf in zip(dataloader.dataset, mask_isConfident) if conf]
+		unconfidentDatapoints = [dp for dp, conf in zip(dataloader.dataset, mask_isConfident) if not conf]
 
 		# If we don't have any unconfident datapoints, just return empty dataloader
 		if len(unconfidentDatapoints) == 0:
