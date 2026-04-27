@@ -395,8 +395,9 @@ class HSSFLDON_ServerApplication:
 				unconfidentDatapoints.append(datapoint)
 
 		# If we don't have any unconfident datapoints, just return empty dataloader
-		if not unconfidentDatapoints:
+		if len(unconfidentDatapoints) == 0:
 			self.logger.warning(f"No unconfident datapoints found with confidence threshold {confidenceThreshold}! Returning empty dataloader for active learning finalists!")
+			self.logger.debug(f"Num confident datapoints: {len(confidentDatapoints)}, Num unconfident datapoints: {len(unconfidentDatapoints)}")
 			return DataLoader([])
 
 		# If we have less unconfident datapoints than the number of finalists we want to send, just return all unconfident datapoints
