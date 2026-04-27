@@ -436,7 +436,6 @@ class HSSFLDON_ServerApplication:
 		)
 		return finalistDataLoader
 
-
 	def _getCentroids(self, modelManager: HSSFLDON_ModelManager, dataLoader: DataLoader, numCentroids: int) -> tuple[torch.Tensor, torch.Tensor]:
 		"""
 		Gets the centroids for a given dataloader using KMeans clustering on model embeddings.
@@ -450,6 +449,11 @@ class HSSFLDON_ServerApplication:
 				batchEmbeddings = batch["embeddings"].to(modelManager.device)
 				embeddings.append(batchEmbeddings)
 		embeddings = torch.cat(embeddings, dim=0)
+
+		# Verify that we have enough datapoints to calculate the requested number of centroids
+		if embeddings.shape[0] < numCentroids:
+			self.logger.warning(f"Number of datapoints ({embeddings.shape[0]}) is less than the number of centroids requested ({numCentroids})! Reducing number of centroids to {embeddings.shape[0]}!")
+			numCentroids = embeddings.shape[0]
 
 		# Perform KMeans clustering on embeddings to get centroids
 		kmeans = KMeans(n_clusters=numCentroids, random_state=0)
