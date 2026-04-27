@@ -282,7 +282,7 @@ class HSSFLDON_ModelManager:
 		"""
 
 		# Get encodings for input
-		encodings: dict = {k: v.to(self.device) for k, v in batch.items() if k != "labels"}
+		encodings: dict = {k: v.to(self.device) for k, v in batch.items() if (k != "labels" and k != "text")}
 		
 		# Keep labels separate and move to device
 		labels = batch.get("labels", None)
