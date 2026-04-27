@@ -440,7 +440,7 @@ class HSSFLDON_ModelManager:
 		self.logger.info(f"Model evaluation completed! Validation Loss: {valStats_lossAverage:.4f}, Validation Accuracy: {valStats_accuracy:.4f}")
 		return valStats_lossAverage, valStats_accuracy
 	
-	def predict(self, dataLoader: DataLoader) -> Tuple[Dict[HSSFLDON_PredictionOutputType, torch.Tensor], torchTensor]:
+	def predict(self, dataLoader: DataLoader) -> Tuple[Dict[HSSFLDON_PredictionOutputType, torch.Tensor], torch.Tensor]:
 		
 		# Holder for all logits
 		logitsList = []
@@ -451,7 +451,7 @@ class HSSFLDON_ModelManager:
 		lossFunction = torch.nn.BCEWithLogitsLoss()
 		with torch.no_grad():
 			for i, batch in enumerate(dataLoader):
-				self.logger.debug(f"Making predictions on batch {i} of {len(dataLoader)} for output type {outputType}!")
+				self.logger.debug(f"Making predictions on batch {i} of {len(dataLoader)}!")
 
 				# Forward pass
 				logits, labels, embeddings = self._forwardPass(batch)
