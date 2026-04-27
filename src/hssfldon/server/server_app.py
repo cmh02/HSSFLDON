@@ -193,6 +193,11 @@ class HSSFLDON_ServerApplication:
 			)
 			self.logger.info(f"Selected finalist datapoints for active learning for iteration {iteration+1}/{self.learningIterations}!")
 
+			# Verify we have finalist datapoints
+			if len(finalistDataloader) == 0:
+				self.logger.warning(f"Attempted to perform Active Learning but no valid final candidates were produced! Skipping active learning for this iteration!")
+				continue
+
 			# Active Assignment: Determine which clients are best for each data point based on oracle mapping
 			for datapoint in finalistDataloader:
 				maxCategoryIndex = torch.argmax(datapoint["probabilities"]).item()
