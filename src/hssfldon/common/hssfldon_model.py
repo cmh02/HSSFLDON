@@ -467,10 +467,10 @@ class HSSFLDON_ModelManager:
 
 		# Process output type
 		result = {}
-		result[HSSFLDON_PredictionOutputType.LOGIT_PREDICTION] = logits
-		result[HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION] = embeddings
-		result[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION] = torch.sigmoid(logits)
-		result[HSSFLDON_PredictionOutputType.BINARY_PREDICTION] = (torch.sigmoid(logits) > 0.5).long()
+		result[HSSFLDON_PredictionOutputType.LOGIT_PREDICTION] = logits.cpu()
+		result[HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION] = embeddings.cpu()
+		result[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION] = torch.sigmoid(logits).cpu()
+		result[HSSFLDON_PredictionOutputType.BINARY_PREDICTION] = (torch.sigmoid(logits) > 0.5).long().cpu()
 		return result, labels
 	
 	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 16, max_length: int = 256, shuffle: bool = True):
