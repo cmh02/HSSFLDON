@@ -440,7 +440,7 @@ class HSSFLDON_ModelManager:
 		self.logger.info(f"Model evaluation completed! Validation Loss: {valStats_lossAverage:.4f}, Validation Accuracy: {valStats_accuracy:.4f}")
 		return valStats_lossAverage, valStats_accuracy
 	
-	def predict(self, dataLoader: DataLoader, outputType: HSSFLDON_PredictionOutputType=HSSFLDON_PredictionOutputType.BINARY_PREDICTION) -> Tuple[Dict[HSSFLDON_PredictionOutputType, torch.Tensor], torchTensor]:
+	def predict(self, dataLoader: DataLoader) -> Tuple[Dict[HSSFLDON_PredictionOutputType, torch.Tensor], torchTensor]:
 		
 		# Holder for all logits
 		logitsList = []
