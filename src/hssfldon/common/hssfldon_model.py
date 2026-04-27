@@ -463,7 +463,7 @@ class HSSFLDON_ModelManager:
 		# Concatenate all logits
 		logits = torch.cat(logitsList, dim=0) if len(logitsList) > 0 else torch.empty((0, self.modelNClasses))
 		labels = torch.cat(labelsList, dim=0) if len(labelsList) > 0 else torch.empty((0, self.modelNClasses))
-		embeddings = torch.cat(embeddingsList, dim=0) if len(embeddingsList) > 0 else torch.empty((0, self.modelNEmbeddingDim))
+		embeddings = torch.cat(embeddingsList, dim=0) if len(embeddingsList) > 0 else torch.empty((0, self.component_base.config.hidden_size))
 
 		# Process output type
 		if outputType == HSSFLDON_PredictionOutputType.LOGIT_PREDICTION:
