@@ -487,6 +487,7 @@ class HSSFLDON_ModelManager:
 				return len(self.texts)
 
 			def __getitem__(self, idx):
+				text = self.texts[idx]
 				enc = self.tokenizer(self.texts[idx], truncation=True, max_length=self.max_length, padding="max_length", return_tensors="pt")
 				item = {k: v.squeeze(0) for k, v in enc.items()}
 				if self.labels is not None:
