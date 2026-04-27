@@ -411,25 +411,22 @@ class HSSFLDON_ServerApplication:
 
 		# Get centroids for unconfident datapoints and confident datapoints
 		unconfidentEmbeddings, unconfidentCentroids = self._getEmbeddingsAndCentroids(modelManager=modelManager, dataLoader=unconfidentDataloader, numCentroids=numCentroids)
-		confidentEmbeddings, confidentCentroids = self._getEmbeddingsAndCentroids(modelManager=modelManager, dataLoader=confidentDataloader, numCentroids=numCentroids)
-
-		# Add embeddings to dataloaders
 		for i in range(len(unconfidentDatapoints)):
 			unconfidentDatapoints[i]["embeddings"] = unconfidentEmbeddings[i].cpu()
-			
-		for i in range(len(confidentDatapoints)):
-			confidentDatapoints[i]["embeddings"] = confidentEmbeddings[i].cpu()
-
-		# Turn unconfident and confident datapoints into dataloaders for processing
 		unconfidentDataloader = DataLoader(unconfidentDatapoints, batch_size=32)
-		confidentDataloader = DataLoader(confidentDatapoints, batch_size=32)
+		
+		if len(confidentDatapoints) > 0:
+			confidentEmbeddings, confidentCentroids = self._getEmbeddingsAndCentroids(modelManager=modelManager, dataLoader=confidentDataloader, numCentroids=numCentroids)
+			for i in range(len(confidentDatapoints)):
+				confidentDatapoints[i]["embeddings"] = confidentEmbeddings[i].cpu()
+			confidentDataloader = DataLoader(confidentDatapoints, batch_size=32)
 
 		# Calculate C-score for each unconfident datapoint
 		unconfidentWithCScores = self._calculateCScores(
 			modelManager=modelManager,
 			unconfidentDataLoader=unconfidentDataloader,
 			unconfidentCentroids=unconfidentCentroids,
-			confidentCentroids=confidentCentroids
+			confidentCentroids=confidentCentroids if len(confidentDatapoints) > 0 else torch.empty((0, unconfidentCentroids.shape[1]))
 		)
 
 		# Get top datapoints with highest C-scores
@@ -478,7 +475,8 @@ class HSSFLDON_ServerApplication:
 
 		# Ensure centroids are on same device as embeddings
 		unconfidentCentroids = unconfidentCentroids.to(modelManager.device)
-		confidentCentroids = confidentCentroids.to(modelManager.device)
+		if len(confidentCentroids) > 0:
+			confidentCentroids = confidentCentroids.to(modelManager.device)
 
 		# Calculate cosine similarities to each centroid
 		unconfidentCentroidSimilarities = F.cosine_similarity(
@@ -486,18 +484,23 @@ class HSSFLDON_ServerApplication:
 			x2=unconfidentCentroids.unsqueeze(0),
 			dim=2
 		)
-		confidentCentroidSimilarities = F.cosine_similarity(
-			x1=allEmbeddings.unsqueeze(1), 
-			x2=confidentCentroids.unsqueeze(0),
-			dim=2
-		)
+		if len(confidentCentroids) > 0:
+			confidentCentroidSimilarities = F.cosine_similarity(
+				x1=allEmbeddings.unsqueeze(1), 
+				x2=confidentCentroids.unsqueeze(0),
+				dim=2
+			)
 
 		# Calculate average similarities for each datapoint
 		averageUnconfidentSimilarity = unconfidentCentroidSimilarities.mean(dim=1)
-		averageConfidentSimilarity = confidentCentroidSimilarities.mean(dim=1)
+		if len(confidentCentroids) > 0:
+			averageConfidentSimilarity = confidentCentroidSimilarities.mean(dim=1)
 
 		# Compute final C-scores as avg(unconfident) - avg(confident) for each datapoint
-		cScores = averageUnconfidentSimilarity - averageConfidentSimilarity
+		if len(confidentCentroids) > 0:
+			cScores = averageUnconfidentSimilarity - averageConfidentSimilarity
+		else:
+			cScores = averageUnconfidentSimilarity
 		for i in range(len(cScores)):
 			unconfidentDataLoader.dataset[i]["c_scores"] = cScores[i].cpu()
 		return unconfidentDataLoader
