@@ -165,7 +165,7 @@ class GetActiveDatapointsResponse(BaseModel):
     """
     status: str = Field(..., description="Status of the request")
     message: str = Field(..., description="Additional information about the request result")
-    datapoint: str = Field(None, description="A text to be labeled by the client")
+    datapoint: str | None = Field(None, description="A text to be labeled by the client")
 
 @HSSFLDON_ServerAPIRouter.get("/active_datapoint", response_model=GetActiveDatapointsResponse, status_code=status.HTTP_200_OK, tags=["Client Management"])
 async def getActiveDatapoint(request: Request, payload: GetActiveDatapointsRequest = Depends()):
