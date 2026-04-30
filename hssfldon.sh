@@ -3,29 +3,18 @@
 # HSSFLDON - Bash Run Script for Simulation
 # Author: Chris Hinkson [@cmh02 github]
 
-# Add python to PATH
-export PATH="$HOME/.local/bin:$PATH"
+# Initialize conda for non-interactive shell
+source ~/miniconda3/etc/profile.d/conda.sh
 
-# Update pip and setuptools
-python -m pip install --upgrade pip
+# Create conda for py version
+conda create -n hssfldon_env python=3.10 -y
+
+# Activate conda environment
+conda activate hssfldon_env
+echo "Conda environment created and activated."
+
+# Update setuptoosl
 python -m pip install --upgrade pip setuptools wheel
-
-# Make virtual env and activate it
-python -m venv .venv
-source .venv/bin/activate
-echo "Virtual environment created and activated."
-
-# Update pip and setuptools
-python -m pip install --upgrade pip
-python -m pip install --upgrade pip setuptools wheel
-
-# Install requirements
-pip install -r requirements.txt
-echo "Required packages installed."
-
-# Install project
-pip install -e .
-echo "Project installed in editable mode."
 
 # Fix torchvision + dependencies
 pip install torchvision
