@@ -68,6 +68,7 @@ class HSSFLDON_ModelManager:
 		self.classPositionWeights = [
 			float(os.getenv(f"HSSFLDON_CLASS_POSWEIGHT_{i}", 1.0)) for i in range(self.modelNClasses)
 		]
+		self.classPositionWeights = torch.clamp(self.classPositionWeights, min=1.0, max=5.0)
 		self.classPositionWeights = torch.tensor(self.classPositionWeights, device=self.device)
 
 		# Create static paths for model components
