@@ -57,23 +57,23 @@ def main() -> None:
 
 		# Poll server and clients until finish / crash / whatever
 		while True:
-            
+			
 			# Check if server process online
-            server_status = serverProcess.poll()
-            if server_status is not None:
-                if server_status == 0:
-                    simulator_logger.info("Server finished successfully. Ending simulation.")
-                else:
-                    simulator_logger.error(f"Server crashed with exit code {server_status}! Ending simulation.")
-                break
+			server_status = serverProcess.poll()
+			if server_status is not None:
+				if server_status == 0:
+					simulator_logger.info("Server finished successfully. Ending simulation.")
+				else:
+					simulator_logger.error(f"Server crashed with exit code {server_status}! Ending simulation.")
+				break
 
-            # Wait a few seconds before checking
-            time.sleep(5)
+			# Wait a few seconds before checking
+			time.sleep(5)
 
 	except KeyboardInterrupt:
-        simulator_logger.info("Received KeyboardInterrupt, shutting down simulator!")
-    except Exception as e:
-        simulator_logger.error(f"Unexpected error in simulator: {e}")
+		simulator_logger.info("Received KeyboardInterrupt, shutting down simulator!")
+	except Exception as e:
+		simulator_logger.error(f"Unexpected error in simulator: {e}")
 
 	# Always cleanup
 	finally:
