@@ -160,6 +160,7 @@ class HSSFLDON_ServerApplication:
 		# Do initial evaluation of global model before training
 		self.enterState(HSSFLDON_ServerState.EVALUATING)
 		self.logger.info(f"Evaluating global model on test dataset for pre-training!")
+		self.modelEvaluationHistory[0] = {}
 		testResults = modelManager.evaluate(
 			dataLoader=self.testDataloader
 		)
