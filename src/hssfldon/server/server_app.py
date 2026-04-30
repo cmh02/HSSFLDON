@@ -16,7 +16,7 @@
 import os
 import time
 import json
-from peft import PeftModel
+import wandb
 import torch
 import uvicorn
 import requests
@@ -86,7 +86,20 @@ class HSSFLDON_ServerApplication:
 			for categoryIndex in oracleCategories:
 				self.oracleToCategoryMapping[categoryIndex] = clientId
 
-		# Initialize 
+		# Initialize wandb
+		run = wandb.init(
+			# Set the wandb entity
+			entity=os.getenv("HSSFLDON_WANDB_ENTITY", "cmh02-auburn-university"),
+			# Set the wandb project
+			project=os.getenv("HSSFLDON_WANDB_PROJECT", "hssfldon"),
+			# Track hyperparameters and run metadata.
+			config={
+				"learning_rate": os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_RATE", 1e-4),
+				"architecture": "FL debBERTa",
+				"dataset": "ucberkeley-dlab/measuring-hate-speech",
+				"epochs": 10,
+			},
+		)
 
 		# Setup API
 		self.api_host = os.getenv("HSSFLDON_SERVER_HOST", "127.0.0.1")
