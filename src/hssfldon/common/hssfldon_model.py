@@ -501,7 +501,7 @@ class HSSFLDON_ModelManager:
 		result[HSSFLDON_PredictionOutputType.BINARY_PREDICTION] = (torch.sigmoid(logits) > 0.5).long().cpu()
 		return result, labels
 	
-	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 16, max_length: int = 256, shuffle: bool = True):
+	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 128, max_length: int = 256, shuffle: bool = True):
 		class _SimpleDS(Dataset):
 
 			def __init__(self, tokenizer, texts, labels, max_length):

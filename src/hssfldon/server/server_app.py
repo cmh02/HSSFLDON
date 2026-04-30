@@ -47,6 +47,8 @@ class HSSFLDON_ServerApplication:
 		envStatus: bool = load_dotenv()
 		if envStatus is False:
 			print(f"Warning: .env file not found or failed to load. Make sure to create a .env file with the necessary configuration variables!")
+		self.batchSize = int(os.getenv("HSSFLDON_MODEL_BATCH_SIZE", 128))
+		self.learningIterations: int = int(os.getenv("HSSFLDON_FL_ROUNDS", 30))
 
 		# Get logger
 		self.logger = HSSFLDON_Logger(name=f"Server")
@@ -97,7 +99,7 @@ class HSSFLDON_ServerApplication:
 				"learning_rate": os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_RATE", 1e-4),
 				"architecture": "FL debBERTa",
 				"dataset": "ucberkeley-dlab/measuring-hate-speech",
-				"epochs": int(os.getenv("HSSFLDON_FL_ROUNDS", 10)),
+				"epochs": self.learningIterations,
 			},
 		)
 
@@ -213,7 +215,6 @@ class HSSFLDON_ServerApplication:
 		)
 
 		# Begin server loop for configured FL rounds
-		self.learningIterations: int = int(os.getenv("HSSFLDON_FL_ROUNDS", 30))
 		self.doLearningLoop()
 
 		# Alert when finished
@@ -311,7 +312,7 @@ class HSSFLDON_ServerApplication:
 			activeDataSet = allUnlabeledCandidatesDataloader.dataset
 			activeDataSet = activeDataSet.add_column("probabilities", output[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION])
 			activeDataSet = activeDataSet.add_column("embeddings", output[HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION])
-			activeDataloader = DataLoader(activeDataSet, batch_size=32)
+			activeDataloader = DataLoader(activeDataSet, batch_size=self.batchSize, shuffle=False)
 			finalistDataloader = self._getFinalistDatapointsForActiveLearning(
 				modelManager=modelManager,
 				dataloader=activeDataloader,
@@ -531,8 +532,8 @@ class HSSFLDON_ServerApplication:
 			return DataLoader(unconfidentDatapoints)
 
 		# Turn unconfident and confident datapoints into dataloaders for processing
-		unconfidentDataloader = DataLoader(unconfidentDatapoints, batch_size=32)
-		confidentDataloader = DataLoader(confidentDatapoints, batch_size=32)
+		unconfidentDataloader = DataLoader(unconfidentDatapoints, batch_size=self.batchSize, shuffle=False)
+		confidentDataloader = DataLoader(confidentDatapoints, batch_size=self.batchSize, shuffle=False)
 
 		# Get centroids for unconfident datapoints and confident datapoints
 		unconfidentCentroids = self._getCentroids(modelManager=modelManager, dataLoader=unconfidentDataloader, numCentroids=numCentroids)
