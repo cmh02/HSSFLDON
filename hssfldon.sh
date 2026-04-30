@@ -44,6 +44,10 @@ echo "[HSSFLDON BASH] Logs directory has been cleared!"
 rm -rf results/*
 echo "[HSSFLDON BASH] Results directory has been cleared!"
 
+# Clear all files in /models/model_head/ directory
+rm -rf models/model_head/*
+echo "[HSSFLDON BASH] Model head directory has been cleared!"
+
 # Start simulator
 python3 -m hssfldon.simulator.simulator_main
 echo "[HSSFLDON BASH] Simulation completed."
