@@ -8,7 +8,12 @@ source ~/miniconda3/etc/profile.d/conda.sh
 echo "[HSSFLDON BASH] Conda has been initialized for non-interactive shell!"
 
 # Create conda for py version
-conda create -n hssfldon_env python=3.10 -y
+if [ ! -d "$HOME/miniconda3/envs/hssfldon_env" ]; then
+    echo "[HSSFLDON BASH] Environment not found. Creating..."
+    conda create -n hssfldon_env python=3.10 -y
+else
+    echo "[HSSFLDON BASH] Environment already exists. Skipping creation."
+fi
 echo "[HSSFLDON BASH] Conda environment created with Python 3.10!"
 
 # Activate conda environment
