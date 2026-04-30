@@ -36,6 +36,10 @@ echo "[HSSFLDON BASH] All requirements have been installed!"
 pip install -e .
 echo "[HSSFLDON BASH] HSSFLDON package has been installed in editable mode!"
 
+# Clear all files in /logs/ directory
+rm -rf logs/*
+echo "[HSSFLDON BASH] Logs directory has been cleared!"
+
 # Start simulator
 python3 -m hssfldon.simulator.simulator_main
 echo "[HSSFLDON BASH] Simulation completed."
