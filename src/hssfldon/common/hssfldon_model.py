@@ -455,7 +455,7 @@ class HSSFLDON_ModelManager:
 		valStats_lossAverage = valStats_loss / max(1, valStats_total)
 		valStats_accuracy = accuracy_score(allLabels, allPredictions)
 		valStats_hammingLoss = hamming_loss(allLabels, allPredictions)
-		valStats_precision, valStats_recall, valStats_f1, _ = precision_recall_fscore_support(allLabels, allPredictions, average='weighted', zero_division=0)
+		valStats_precision, valStats_recall, valStats_f1, _ = precision_recall_fscore_support(allLabels, allPredictions, average='macro', zero_division=0)
 
 		# Log and return
 		self.logger.info(f"Model evaluation completed! Validation Loss: {valStats_lossAverage:.4f}, Validation Accuracy: {valStats_accuracy:.4f}")
