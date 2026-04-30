@@ -70,12 +70,17 @@ class HSSFLDON_ClientApplication:
 		if self.registered:
 			self.doClientLoop()
 
-	def doClientLoop(self):
+	def doClientLoop(self) -> bool:
 		"""
 		Main loop for the client application.
 		"""
 		self.logger.info(f"Starting main client loop!")
 		while True:
+
+			# Check health
+			if not self.checkServerHealth():
+				self.logger.error(f"Server is offline or unresponsive! Closing training loop.")
+				return False
 
 			# Get next task from the server
 			task: HSSFLDON_ClientTask = self.getNextTask()
