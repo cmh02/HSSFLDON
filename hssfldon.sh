@@ -3,8 +3,9 @@
 # HSSFLDON - Bash Run Script for Simulation
 # Author: Chris Hinkson [@cmh02 github]
 
-# Update pip
+# Update pip and setuptools
 python -m pip install --upgrade pip
+python -m pip install --upgrade pip setuptools wheel
 
 # Make virtual env and activate it
 python -m venv .venv
