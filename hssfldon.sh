@@ -25,8 +25,8 @@ python -m pip install --upgrade pip setuptools wheel
 echo "[HSSFLDON BASH] pip and setuptools have been updated!"
 
 # Fix torchvision + dependencies
-pip install torchvision
-echo "[HSSFLDON BASH] torchvision and dependencies installed."
+# pip install torchvision
+# echo "[HSSFLDON BASH] torchvision and dependencies installed."
 
 # Install requirements
 pip install -r requirements.txt
