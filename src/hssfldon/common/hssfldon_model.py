@@ -65,11 +65,11 @@ class HSSFLDON_ModelManager:
 		self.confidenceThreshold: float = float(os.getenv("HSSFLDON_CLIENT_CONFIDENCE_THRESHOLD", 0.75))
 
 		# Build class position weights based on distribution
-		self.classPositionWeights = [
-			float(os.getenv(f"HSSFLDON_CLASS_POSWEIGHT_{i}", 1.0)) for i in range(self.modelNClasses)
-		]
-		self.classPositionWeights = torch.tensor(self.classPositionWeights, device=self.device)
-		self.classPositionWeights = torch.clamp(self.classPositionWeights, min=1.0, max=5.0)
+		# self.classPositionWeights = [
+		# 	float(os.getenv(f"HSSFLDON_CLASS_POSWEIGHT_{i}", 1.0)) for i in range(self.modelNClasses)
+		# ]
+		# self.classPositionWeights = torch.tensor(self.classPositionWeights, device=self.device)
+		# self.classPositionWeights = torch.clamp(self.classPositionWeights, min=1.0, max=5.0)
 
 		# Create static paths for model components
 		self.modelPath_base: str = os.path.join(self.modelDirectory, f"model_base")
@@ -345,7 +345,7 @@ class HSSFLDON_ModelManager:
 			epochStats_total = 0
 
 			# Iterate over training data
-			lossFunction = torch.nn.BCEWithLogitsLoss(pos_weight=self.classPositionWeights)
+			lossFunction = torch.nn.BCEWithLogitsLoss()
 			for i, batch in enumerate(dataLoader, 1):
 
 				# Forward pass
@@ -437,7 +437,7 @@ class HSSFLDON_ModelManager:
 		allPredictions = []
 
 		# Iterate over validation data
-		lossFunction = torch.nn.BCEWithLogitsLoss(pos_weight=self.classPositionWeights)
+		lossFunction = torch.nn.BCEWithLogitsLoss()
 		with torch.no_grad():
 			for batch in dataLoader:
 
@@ -484,7 +484,7 @@ class HSSFLDON_ModelManager:
 		embeddingsList = []
 
 		# Iterate over validation data
-		lossFunction = torch.nn.BCEWithLogitsLoss(pos_weight=self.classPositionWeights)
+		lossFunction = torch.nn.BCEWithLogitsLoss()
 		with torch.no_grad():
 			for i, batch in enumerate(dataLoader):
 				self.logger.debug(f"Making predictions on batch {i} of {len(dataLoader)}!")
