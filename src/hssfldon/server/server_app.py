@@ -62,6 +62,8 @@ class HSSFLDON_ServerApplication:
 		self.clientActiveLearningDatapointCache: dict[int, dict] = {}
 
 		# Initialize model evaluation tracking {learning_iteration: {passive_or_active: {metric_name: metric_value}}}}
+		self.evaluationResultsDirectory: str = os.getenv("HSSFLDON_EVALUATION_RESULTS_DIRECTORY", "results")
+		os.makedirs(self.evaluationResultsDirectory, exist_ok=True)
 		self.modelEvaluationHistory: dict[int, dict[str, dict[str, float]]] = {}
 
 		# Intialize index-category mapping
@@ -70,11 +72,10 @@ class HSSFLDON_ServerApplication:
 		self.indexToCategoryMapping[1] = "respect"
 		self.indexToCategoryMapping[2] = "insult"
 		self.indexToCategoryMapping[3] = "humiliate"
-		self.indexToCategoryMapping[4] = "status"
-		self.indexToCategoryMapping[5] = "dehumanize"
-		self.indexToCategoryMapping[6] = "violence"
-		self.indexToCategoryMapping[7] = "genocide"
-		self.indexToCategoryMapping[9] = "attack_defend"
+		self.indexToCategoryMapping[4] = "dehumanize"
+		self.indexToCategoryMapping[5] = "violence"
+		self.indexToCategoryMapping[6] = "genocide"
+		self.indexToCategoryMapping[7] = "attack_defend"
 		self.indexToCategoryMapping[10] = "hatespeech"
 		self.categoryToIndexMapping: dict[str, int] = {v: k for k, v in self.indexToCategoryMapping.items()}
 
@@ -124,6 +125,13 @@ class HSSFLDON_ServerApplication:
 		time.sleep(registrationWindow)
 		self.enterState(HSSFLDON_ServerState.IDLE)
 
+		# Setup model
+		self.modelName: str = os.getenv("HSSFLDON_MODEL_NAME", "bert-base-uncased")
+		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
+		modelManager.saveBaseModel(model=modelManager.component_base, name = "pytorch_model.bin")
+		modelManager.saveTokenizer(tokenizer=modelManager.tokenizer, name = "tokenizer.pt")
+		modelManager.saveClassificationHead(head=modelManager.component_head, name = "classification_head_global.pt")
+
 		# Setup data directory for server unlabeled data
 		self.dataDirectory: str = os.getenv("HSSFLDON_CLIENT_DATA_DIRECTORY", "data")
 		self.dataFilePath: str = os.path.join(self.dataDirectory, f"server/server.parquet")
@@ -148,17 +156,6 @@ class HSSFLDON_ServerApplication:
 			texts = self.testDataset["text"],
 			labels = self.testDataset["labels"]
 		)
-
-		# Setup evaluation results directory
-		self.evaluationResultsDirectory: str = os.getenv("HSSFLDON_EVALUATION_RESULTS_DIRECTORY", "results")
-		os.makedirs(self.evaluationResultsDirectory, exist_ok=True)
-
-		# Setup model
-		self.modelName: str = os.getenv("HSSFLDON_MODEL_NAME", "bert-base-uncased")
-		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
-		modelManager.saveBaseModel(model=modelManager.component_base, name = "pytorch_model.bin")
-		modelManager.saveTokenizer(tokenizer=modelManager.tokenizer, name = "tokenizer.pt")
-		modelManager.saveClassificationHead(head=modelManager.component_head, name = "classification_head_global.pt")
 
 		# Do initial evaluation of global model before training
 		self.enterState(HSSFLDON_ServerState.EVALUATING)
