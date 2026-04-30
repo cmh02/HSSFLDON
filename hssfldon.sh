@@ -15,6 +15,10 @@ python -m venv .venv
 source .venv/bin/activate
 echo "Virtual environment created and activated."
 
+# Update pip and setuptools
+python -m pip install --upgrade pip
+python -m pip install --upgrade pip setuptools wheel
+
 # Install requirements
 pip install -r requirements.txt
 echo "Required packages installed."
