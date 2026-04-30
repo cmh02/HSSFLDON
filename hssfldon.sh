@@ -40,6 +40,10 @@ echo "[HSSFLDON BASH] HSSFLDON package has been installed in editable mode!"
 rm -rf logs/*
 echo "[HSSFLDON BASH] Logs directory has been cleared!"
 
+# Clear all files in /results/ directory
+rm -rf results/*
+echo "[HSSFLDON BASH] Results directory has been cleared!"
+
 # Start simulator
 python3 -m hssfldon.simulator.simulator_main
 echo "[HSSFLDON BASH] Simulation completed."
