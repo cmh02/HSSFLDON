@@ -122,13 +122,6 @@ class HSSFLDON_ServerApplication:
 		time.sleep(registrationWindow)
 		self.enterState(HSSFLDON_ServerState.IDLE)
 
-		# Setup model
-		self.modelName: str = os.getenv("HSSFLDON_MODEL_NAME", "bert-base-uncased")
-		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
-		modelManager.saveBaseModel(model=modelManager.component_base, name = "pytorch_model.bin")
-		modelManager.saveTokenizer(tokenizer=modelManager.tokenizer, name = "tokenizer.pt")
-		modelManager.saveClassificationHead(head=modelManager.component_head, name = "classification_head_global.pt")
-
 		# Setup data directory for server unlabeled data
 		self.dataDirectory: str = os.getenv("HSSFLDON_CLIENT_DATA_DIRECTORY", "data")
 		self.dataFilePath: str = os.path.join(self.dataDirectory, f"server/server.parquet")
@@ -157,6 +150,32 @@ class HSSFLDON_ServerApplication:
 		# Setup evaluation results directory
 		self.evaluationResultsDirectory: str = os.getenv("HSSFLDON_EVALUATION_RESULTS_DIRECTORY", "results")
 		os.makedirs(self.evaluationResultsDirectory, exist_ok=True)
+
+		# Setup model
+		self.modelName: str = os.getenv("HSSFLDON_MODEL_NAME", "bert-base-uncased")
+		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
+		modelManager.saveBaseModel(model=modelManager.component_base, name = "pytorch_model.bin")
+		modelManager.saveTokenizer(tokenizer=modelManager.tokenizer, name = "tokenizer.pt")
+		modelManager.saveClassificationHead(head=modelManager.component_head, name = "classification_head_global.pt")
+
+		# Do initial evaluation of global model before training
+		self.enterState(HSSFLDON_ServerState.EVALUATING)
+		self.logger.info(f"Evaluating global model on test dataset for pre-training!")
+		testLoss, testAccuracy = modelManager.evaluate(
+			dataLoader=self.testDataloader
+		)
+		self.logger.debug(f"Global evaluation completed for pre-training; Test Loss: {testLoss}, Test Accuracy: {testAccuracy}")
+		self.modelEvaluationHistory[0]["passive"] = {
+			"loss": testLoss,
+			"accuracy": testAccuracy
+		}
+		self.modelEvaluationHistory[0]["active"] = {
+			"loss": testLoss,
+			"accuracy": testAccuracy
+		}
+		self.wandbRun.log({"passive/accuracy": testAccuracy, "passive/loss": testLoss}, step=0)
+		self.wandbRun.log({"active/accuracy": testAccuracy, "active/loss": testLoss}, step=0)
+		self.enterState(HSSFLDON_ServerState.IDLE)
 
 		# Alert when started
 		self.wandbRun.alert(
