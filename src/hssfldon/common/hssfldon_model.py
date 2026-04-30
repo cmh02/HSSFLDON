@@ -202,6 +202,7 @@ class HSSFLDON_ModelManager:
 		
 		# Create classification head
 		head = nn.Sequential(
+			nn.LayerNorm(self.component_base.config.hidden_size),
 			nn.Dropout(0.2),
 			nn.Linear(self.component_base.config.hidden_size, self.component_base.config.hidden_size // 2),
 			nn.GELU(),
