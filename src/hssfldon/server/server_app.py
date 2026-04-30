@@ -213,7 +213,7 @@ class HSSFLDON_ServerApplication:
 		)
 
 		# Begin server loop for configured FL rounds
-		self.learningIterations: int = int(os.getenv("HSSFLDON_FL_ROUNDS", 10))
+		self.learningIterations: int = int(os.getenv("HSSFLDON_FL_ROUNDS", 30))
 		self.doLearningLoop()
 
 		# Alert when finished
