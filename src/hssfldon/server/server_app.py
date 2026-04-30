@@ -97,7 +97,7 @@ class HSSFLDON_ServerApplication:
 				"learning_rate": os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_RATE", 1e-4),
 				"architecture": "FL debBERTa",
 				"dataset": "ucberkeley-dlab/measuring-hate-speech",
-				"epochs": 10,
+				"epochs": int(os.getenv("HSSFLDON_FL_ROUNDS", 10)),
 			},
 		)
 
@@ -165,8 +165,8 @@ class HSSFLDON_ServerApplication:
 			level="INFO"
 		)
 
-		# Begin server loop for configured iterations
-		self.learningIterations: int = int(os.getenv("HSSFLDON_LEARNING_ITERATIONS", 10))
+		# Begin server loop for configured FL rounds
+		self.learningIterations: int = int(os.getenv("HSSFLDON_FL_ROUNDS", 10))
 		self.doLearningLoop()
 
 		# Alert when finished
