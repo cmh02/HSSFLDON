@@ -34,17 +34,18 @@ class HSSFLDON_Logger:
 		# Prevent propogation to root logger to avoid duplicate logs
 		self.logger.propagate = False
 
-		# Setup console handler
-		console_handler = self._setup_getConsoleHandler()
-		self.logger.addHandler(console_handler)
+		if not self.logger.hasHandlers():
+			# Setup console handler
+			console_handler = self._setup_getConsoleHandler()
+			self.logger.addHandler(console_handler)
 
-		# Setup global file handler
-		global_file_handler = self._setup_getGlobalFileHandler()
-		self.logger.addHandler(global_file_handler)
+			# Setup global file handler
+			global_file_handler = self._setup_getGlobalFileHandler()
+			self.logger.addHandler(global_file_handler)
 
-		# Setup local file handler
-		local_file_handler = self._setup_getLocalFileHandler()
-		self.logger.addHandler(local_file_handler)
+			# Setup local file handler
+			local_file_handler = self._setup_getLocalFileHandler()
+			self.logger.addHandler(local_file_handler)
 
 		# Finalize logger setup
 		self.logger.setLevel(level)
