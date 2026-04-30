@@ -87,7 +87,7 @@ class HSSFLDON_ServerApplication:
 				self.oracleToCategoryMapping[categoryIndex] = clientId
 
 		# Initialize wandb
-		run = wandb.init(
+		wandbRun = wandb.init(
 			# Set the wandb entity
 			entity=os.getenv("HSSFLDON_WANDB_ENTITY", "cmh02-auburn-university"),
 			# Set the wandb project
@@ -161,6 +161,9 @@ class HSSFLDON_ServerApplication:
 		# Begin server loop for configured iterations
 		self.learningIterations: int = int(os.getenv("HSSFLDON_LEARNING_ITERATIONS", 10))
 		self.doLearningLoop()
+
+		# Finish wandb run
+		wandbRun.finish()
 
 		# Close API and shutdown everything (for now)
 		self.closeApi()
@@ -302,6 +305,9 @@ class HSSFLDON_ServerApplication:
 				"loss": testLoss,
 				"accuracy": testAccuracy
 			}
+
+			# Log evaluation metrics to wandb
+			wandbRun.log({"acc": testAccuracy, "loss": testLoss})
 		
 		# Save model evaluation history to file after all iterations are complete
 		evaluationHistoryPath = os.path.join(self.evaluationResultsDirectory, f"model_evaluation_history.json")
