@@ -48,7 +48,7 @@ class HSSFLDON_ServerApplication:
 		if envStatus is False:
 			print(f"Warning: .env file not found or failed to load. Make sure to create a .env file with the necessary configuration variables!")
 		self.batchSize = int(os.getenv("HSSFLDON_MODEL_BATCH_SIZE", 128))
-		self.learningIterations: int = int(os.getenv("HSSFLDON_FL_ROUNDS", 30))
+		self.learningRounds: int = int(os.getenv("HSSFLDON_FL_ROUNDS", 30))
 
 		# Get logger
 		self.logger = HSSFLDON_Logger(name=f"Server")
@@ -100,7 +100,7 @@ class HSSFLDON_ServerApplication:
 				"learning_rate": os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_RATE", 1e-4),
 				"architecture": "FL debBERTa",
 				"dataset": "ucberkeley-dlab/measuring-hate-speech",
-				"epochs": self.learningIterations,
+				"epochs": self.learningRounds,
 			},
 		)
 
@@ -232,15 +232,18 @@ class HSSFLDON_ServerApplication:
 		"""
 		Main loop for the server application to perform learning iterations.
 		"""
-		self.logger.info(f"Starting main server learning loop for {self.learningIterations} iterations!")
-		for iteration in range(self.learningIterations):
-			self.logger.info(f"Starting learning iteration {iteration+1}/{self.learningIterations}!")
+		self.logger.info(f"Starting main server learning loop for {self.learningRounds} iterations!")
+		for iteration in range(self.learningRounds):
+			learningRound = iteration + 1
+
+			# Log and make model
+			self.logger.info(f"Starting learning round {learningRound}/{self.learningRounds}!")
 			modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
 			self.modelEvaluationHistory[iteration+1] = {}
 
 			# Passive Learning: Tell clients to perform passive learning
 			self.enterState(HSSFLDON_ServerState.PASSIVE_LEARNING)
-			self.logger.info(f"Performing passive learning for iteration {iteration+1}/{self.learningIterations}!")
+			self.logger.info(f"Performing passive learning for round {learningRound}/{self.learningRounds}!")
 			for clientId in self.clients:
 
 				# Assign passive learning task to client
@@ -258,18 +261,18 @@ class HSSFLDON_ServerApplication:
 
 			# Passive Aggregation: Aggregate client updates into global model for passive learning
 			self.enterState(HSSFLDON_ServerState.AGGREGATING)
-			self.logger.info(f"Aggregating client updates for iteration {iteration+1}/{self.learningIterations}!")
+			self.logger.info(f"Aggregating client updates for round {learningRound}/{self.learningRounds}!")
 			avgStateDict = self._fedAverageClientUpdates(modelManager=modelManager, clientHeadPaths=self.clientHeadPathCache)
 			if avgStateDict is not None:
 				modelManager.component_head.load_state_dict(avgStateDict)
 				modelManager.saveClassificationHead(head=modelManager.component_head, name=f"classification_head_global.pt")
-				self.logger.info(f"Successfully aggregated client updates for iteration {iteration+1}/{self.learningIterations}!")
+				self.logger.info(f"Successfully aggregated client updates for round {learningRound}/{self.learningRounds}!")
 			else:
-				self.logger.warning(f"Failed to aggregate client updates for iteration {iteration+1}/{self.learningIterations}!")
+				self.logger.warning(f"Failed to aggregate client updates for round {learningRound}/{self.learningRounds}!")
 
 			# Evaluate global model on test dataset
 			self.enterState(HSSFLDON_ServerState.EVALUATING)
-			self.logger.info(f"Evaluating global model on test dataset for iteration {iteration+1}/{self.learningIterations}!")
+			self.logger.info(f"Evaluating global model on test dataset for round {learningRound}/{self.learningRounds}!")
 			testResults = modelManager.evaluate(
 				dataLoader=self.testDataloader
 			)
@@ -298,7 +301,7 @@ class HSSFLDON_ServerApplication:
 
 			# Active Preparation: Determine finalist datapoints to send to clients
 			self.enterState(HSSFLDON_ServerState.ACTIVE_LEARNING)
-			self.logger.info(f"Preparing for active learning for iteration {iteration+1}/{self.learningIterations}!")
+			self.logger.info(f"Preparing for active learning for round {learningRound}/{self.learningRounds}!")
 			allUnlabeledCandidatesDataloader = modelManager.tokenize_and_create_dataloader(
 				texts = self.unlabeledDataset["text"],
 				labels=None
@@ -306,7 +309,7 @@ class HSSFLDON_ServerApplication:
 			output, _ = modelManager.predict(
 				dataLoader=allUnlabeledCandidatesDataloader
 			)
-			self.logger.info(f"Calculated probabilities for unlabeled dataset for iteration {iteration+1}/{self.learningIterations}!")
+			self.logger.info(f"Calculated probabilities for unlabeled dataset for round {learningRound}/{self.learningRounds}!")
 			activeDataSet = allUnlabeledCandidatesDataloader.dataset
 			activeDataSet = activeDataSet.add_column("probabilities", output[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION])
 			activeDataSet = activeDataSet.add_column("embeddings", output[HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION])
@@ -318,11 +321,11 @@ class HSSFLDON_ServerApplication:
 				numFinalists=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_FINALISTS", 10)),
 				numCentroids=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_CENTROIDS", 5))
 			)
-			self.logger.info(f"Selected finalist datapoints for active learning for iteration {iteration+1}/{self.learningIterations}!")
+			self.logger.info(f"Selected finalist datapoints for active learning for round {learningRound}/{self.learningRounds}!")
 
 			# Verify we have finalist datapoints
 			if len(finalistDataloader.dataset) == 0:
-				self.logger.warning(f"Attempted to perform Active Learning but no valid final candidates were produced! Skipping active learning for this iteration!")
+				self.logger.warning(f"Attempted to perform Active Learning but no valid final candidates were produced! Skipping active learning for this round {learningRound}/{self.learningRounds}!")
 				continue
 
 			# Active Assignment: Determine which clients are best for each data point based on oracle mapping
@@ -340,7 +343,7 @@ class HSSFLDON_ServerApplication:
 
 				# Make sure client will have a datapoint
 				if self.clientActiveLearningDatapointCache.get(clientId) is None:
-					self.logger.info(f"No active learning datapoint assigned to client {clientId} for iteration {iteration+1}/{self.learningIterations}, skipping active learning task assignment for this client!")
+					self.logger.info(f"No active learning datapoint assigned to client {clientId} for round {learningRound}/{self.learningRounds}, skipping active learning task assignment for this client!")
 					continue
 
 				# Assign active learning task to client
@@ -362,23 +365,23 @@ class HSSFLDON_ServerApplication:
 
 			# Active Aggregation: Aggregate client updates into global model for active learning
 			self.enterState(HSSFLDON_ServerState.AGGREGATING)
-			self.logger.info(f"Aggregating client updates for iteration {iteration+1}/{self.learningIterations}!")
+			self.logger.info(f"Aggregating client updates for round {learningRound}/{self.learningRounds}!")
 			avgStateDict = self._fedAverageClientUpdates(modelManager=modelManager, clientHeadPaths=self.clientHeadPathCache)
 			if avgStateDict is not None:
 				modelManager.component_head.load_state_dict(avgStateDict)
 				modelManager.saveClassificationHead(head=modelManager.component_head, name=f"classification_head_global.pt")
-				self.logger.info(f"Successfully aggregated client updates for iteration {iteration+1}/{self.learningIterations}!")
+				self.logger.info(f"Successfully aggregated client updates for round {learningRound}/{self.learningRounds}!")
 			else:
-				self.logger.warning(f"Failed to aggregate client updates for iteration {iteration+1}/{self.learningIterations}!")	
+				self.logger.warning(f"Failed to aggregate client updates for round {learningRound}/{self.learningRounds}!")	
 
 			# Evaluate global model on test dataset
 			self.enterState(HSSFLDON_ServerState.EVALUATING)
-			self.logger.info(f"Evaluating global model on test dataset for iteration {iteration+1}/{self.learningIterations}!")
+			self.logger.info(f"Evaluating global model on test dataset for round {learningRound}/{self.learningRounds}!")
 			testResults = modelManager.evaluate(
 				dataLoader=self.testDataloader
 			)
 			self.logger.debug(f"Global evaluation completed after active learning; Test Loss: {testResults.get('loss', 0.0)}, Test Accuracy: {testResults.get('accuracy', 0.0)}")
-			self.modelEvaluationHistory[iteration+1]["active"] = {
+			self.modelEvaluationHistory[learningRound]["active"] = {
 				"loss": testResults.get("loss", 0.0),
 				"accuracy": testResults.get("accuracy", 0.0),
 				"hamming_loss": testResults.get("hamming_loss", 0.0),
@@ -404,7 +407,7 @@ class HSSFLDON_ServerApplication:
 		evaluationHistoryPath = os.path.join(self.evaluationResultsDirectory, f"model_evaluation_history.json")
 		with open(evaluationHistoryPath, "w") as f:
 			json.dump(self.modelEvaluationHistory, f)
-		self.logger.info(f"Saved model evaluation history to {evaluationHistoryPath} after completing all learning iterations!")
+		self.logger.info(f"Saved model evaluation history to {evaluationHistoryPath} after completing all learning iterations ({self.learningRounds})!")
 
 		# Return to idle state after learning loop is complete
 		self.enterState(HSSFLDON_ServerState.IDLE)
