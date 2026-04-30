@@ -441,10 +441,13 @@ class HSSFLDON_ServerApplication:
 		confidentDatapoints = [dp for dp, conf in zip(dataloader.dataset, mask_isConfident) if conf]
 		unconfidentDatapoints = [dp for dp, conf in zip(dataloader.dataset, mask_isConfident) if not conf]
 
+		# Log sizes of confident and unconfident datapoints
+		self.logger.debug(f"Number of confident datapoints: {len(confidentDatapoints)}, Number of unconfident datapoints: {len(unconfidentDatapoints)}")
+		self.wandbRun.log({"active/NumConfident": len(confidentDatapoints), "active/NumUnconfident": len(unconfidentDatapoints)})
+
 		# If we don't have any unconfident datapoints, just return empty dataloader
 		if len(unconfidentDatapoints) == 0:
 			self.logger.warning(f"No unconfident datapoints found with confidence threshold {confidenceThreshold}! Returning empty dataloader for active learning finalists!")
-			self.logger.debug(f"Num confident datapoints: {len(confidentDatapoints)}, Num unconfident datapoints: {len(unconfidentDatapoints)}")
 			return DataLoader([])
 
 		# If we have less unconfident datapoints than the number of finalists we want to send, just return all unconfident datapoints
