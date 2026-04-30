@@ -253,7 +253,7 @@ class HSSFLDON_ServerApplication:
 			}
 
 			# Log evaluation metrics to wandb
-			self.wandbRun.log({"passive/accuracy": testAccuracy, "passive/loss": testLoss})
+			self.wandbRun.log({"passive/accuracy": testAccuracy, "passive/loss": testLoss}, step=(iteration+1))
 
 			# Active Preparation: Determine finalist datapoints to send to clients
 			self.enterState(HSSFLDON_ServerState.ACTIVE_LEARNING)
@@ -343,7 +343,7 @@ class HSSFLDON_ServerApplication:
 			}
 
 			# Log evaluation metrics to wandb
-			self.wandbRun.log({"active/accuracy": testAccuracy, "active/loss": testLoss})
+			self.wandbRun.log({"active/accuracy": testAccuracy, "active/loss": testLoss}, step=(iteration+1))
 		
 		# Save model evaluation history to file after all iterations are complete
 		evaluationHistoryPath = os.path.join(self.evaluationResultsDirectory, f"model_evaluation_history.json")
