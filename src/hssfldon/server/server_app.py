@@ -161,20 +161,48 @@ class HSSFLDON_ServerApplication:
 		# Do initial evaluation of global model before training
 		self.enterState(HSSFLDON_ServerState.EVALUATING)
 		self.logger.info(f"Evaluating global model on test dataset for pre-training!")
-		testLoss, testAccuracy = modelManager.evaluate(
+		testResults = modelManager.evaluate(
 			dataLoader=self.testDataloader
 		)
-		self.logger.debug(f"Global evaluation completed for pre-training; Test Loss: {testLoss}, Test Accuracy: {testAccuracy}")
+		self.logger.debug(f"Global evaluation completed for pre-training; Test Loss: {testResults['loss']}, Test Accuracy: {testResults['accuracy']}")
 		self.modelEvaluationHistory[0]["passive"] = {
-			"loss": testLoss,
-			"accuracy": testAccuracy
+			"loss": testResults.get("loss", 0.0),
+			"accuracy": testResults.get("accuracy", 0.0),
+			"hamming_loss": testResults.get("hamming_loss", 0.0),
+			"precision": testResults.get("precision", 0.0),
+			"recall": testResults.get("recall", 0.0),
+			"f1_score": testResults.get("f1_score", 0.0)
 		}
 		self.modelEvaluationHistory[0]["active"] = {
-			"loss": testLoss,
-			"accuracy": testAccuracy
+			"loss": testResults.get("loss", 0.0),
+			"accuracy": testResults.get("accuracy", 0.0),
+			"hamming_loss": testResults.get("hamming_loss", 0.0),
+			"precision": testResults.get("precision", 0.0),
+			"recall": testResults.get("recall", 0.0),
+			"f1_score": testResults.get("f1_score", 0.0)
 		}
-		self.wandbRun.log({"passive/accuracy": testAccuracy, "passive/loss": testLoss}, step=0)
-		self.wandbRun.log({"active/accuracy": testAccuracy, "active/loss": testLoss}, step=0)
+		self.wandbRun.log(
+			data={
+				"passive/loss": testResults.get("loss", 0.0),
+				"passive/accuracy": testResults.get("accuracy", 0.0),
+				"passive/hamming_loss": testResults.get("hamming_loss", 0.0),
+				"passive/precision": testResults.get("precision", 0.0),
+				"passive/recall": testResults.get("recall", 0.0),
+				"passive/f1_score": testResults.get("f1_score", 0.0)
+			},
+			step=0
+		)
+		self.wandbRun.log(
+			data={
+				"active/accuracy": testResults.get("accuracy", 0.0),
+				"active/loss": testResults.get("loss", 0.0),
+				"active/hamming_loss": testResults.get("hamming_loss", 0.0),
+				"active/precision": testResults.get("precision", 0.0),
+				"active/recall": testResults.get("recall", 0.0),
+				"active/f1_score": testResults.get("f1_score", 0.0)
+			},
+			step=0
+		)
 		self.enterState(HSSFLDON_ServerState.IDLE)
 
 		# Alert when started
@@ -243,17 +271,31 @@ class HSSFLDON_ServerApplication:
 			# Evaluate global model on test dataset
 			self.enterState(HSSFLDON_ServerState.EVALUATING)
 			self.logger.info(f"Evaluating global model on test dataset for iteration {iteration+1}/{self.learningIterations}!")
-			testLoss, testAccuracy = modelManager.evaluate(
+			testResults = modelManager.evaluate(
 				dataLoader=self.testDataloader
 			)
-			self.logger.debug(f"Global evaluation completed after passive learning; Test Loss: {testLoss}, Test Accuracy: {testAccuracy}")
+			self.logger.debug(f"Global evaluation completed after passive learning; Test Loss: {testResults.get('loss', 0.0)}, Test Accuracy: {testResults.get('accuracy', 0.0)}")
 			self.modelEvaluationHistory[iteration+1]["passive"] = {
-				"loss": testLoss,
-				"accuracy": testAccuracy
+				"loss": testResults.get("loss", 0.0),
+				"accuracy": testResults.get("accuracy", 0.0),
+				"hamming_loss": testResults.get("hamming_loss", 0.0),
+				"precision": testResults.get("precision", 0.0),
+				"recall": testResults.get("recall", 0.0),
+				"f1_score": testResults.get("f1_score", 0.0)
 			}
 
 			# Log evaluation metrics to wandb
-			self.wandbRun.log({"passive/accuracy": testAccuracy, "passive/loss": testLoss}, step=(iteration+1))
+			self.wandbRun.log(
+				data={
+					"passive/accuracy": testResults.get("accuracy", 0.0),
+					"passive/loss": testResults.get("loss", 0.0),
+					"passive/hamming_loss": testResults.get("hamming_loss", 0.0),
+					"passive/precision": testResults.get("precision", 0.0),
+					"passive/recall": testResults.get("recall", 0.0),
+					"passive/f1_score": testResults.get("f1_score", 0.0)
+				},
+				step=(iteration+1)
+			)
 
 			# Active Preparation: Determine finalist datapoints to send to clients
 			self.enterState(HSSFLDON_ServerState.ACTIVE_LEARNING)
@@ -333,17 +375,31 @@ class HSSFLDON_ServerApplication:
 			# Evaluate global model on test dataset
 			self.enterState(HSSFLDON_ServerState.EVALUATING)
 			self.logger.info(f"Evaluating global model on test dataset for iteration {iteration+1}/{self.learningIterations}!")
-			testLoss, testAccuracy = modelManager.evaluate(
+			testResults = modelManager.evaluate(
 				dataLoader=self.testDataloader
 			)
-			self.logger.debug(f"Global evaluation completed after active learning; Test Loss: {testLoss}, Test Accuracy: {testAccuracy}")
+			self.logger.debug(f"Global evaluation completed after active learning; Test Loss: {testResults.get('loss', 0.0)}, Test Accuracy: {testResults.get('accuracy', 0.0)}")
 			self.modelEvaluationHistory[iteration+1]["active"] = {
-				"loss": testLoss,
-				"accuracy": testAccuracy
+				"loss": testResults.get("loss", 0.0),
+				"accuracy": testResults.get("accuracy", 0.0),
+				"hamming_loss": testResults.get("hamming_loss", 0.0),
+				"precision": testResults.get("precision", 0.0),
+				"recall": testResults.get("recall", 0.0),
+				"f1_score": testResults.get("f1_score", 0.0)
 			}
 
 			# Log evaluation metrics to wandb
-			self.wandbRun.log({"active/accuracy": testAccuracy, "active/loss": testLoss}, step=(iteration+1))
+			self.wandbRun.log(
+				data={
+					"active/accuracy": testResults.get("accuracy", 0.0),
+					"active/loss": testResults.get("loss", 0.0),
+					"active/hamming_loss": testResults.get("hamming_loss", 0.0),
+					"active/precision": testResults.get("precision", 0.0),
+					"active/recall": testResults.get("recall", 0.0),
+					"active/f1_score": testResults.get("f1_score", 0.0)
+				},
+				step=(iteration+1)
+			)
 		
 		# Save model evaluation history to file after all iterations are complete
 		evaluationHistoryPath = os.path.join(self.evaluationResultsDirectory, f"model_evaluation_history.json")
