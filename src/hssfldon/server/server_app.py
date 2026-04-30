@@ -233,7 +233,7 @@ class HSSFLDON_ServerApplication:
 			activeDataSet = allUnlabeledCandidatesDataloader.dataset
 			activeDataSet = activeDataSet.add_column("probabilities", output[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION])
 			activeDataSet = activeDataSet.add_column("embeddings", output[HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION])
-			activeDataloader = DataLoader(activeDataSet, batch_size=32)}")
+			activeDataloader = DataLoader(activeDataSet, batch_size=32)
 			finalistDataloader = self._getFinalistDatapointsForActiveLearning(
 				modelManager=modelManager,
 				dataloader=activeDataloader,
