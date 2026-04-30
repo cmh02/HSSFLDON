@@ -76,7 +76,7 @@ class HSSFLDON_ServerApplication:
 		self.indexToCategoryMapping[5] = "violence"
 		self.indexToCategoryMapping[6] = "genocide"
 		self.indexToCategoryMapping[7] = "attack_defend"
-		self.indexToCategoryMapping[10] = "hatespeech"
+		self.indexToCategoryMapping[8] = "hatespeech"
 		self.categoryToIndexMapping: dict[str, int] = {v: k for k, v in self.indexToCategoryMapping.items()}
 
 		# Initialize category oracle mapping
