@@ -62,6 +62,7 @@ class HSSFLDON_ModelManager:
 		self.modelId: str = os.getenv("HSSFLDON_MODEL_ID", "microsoft/deberta-v3-small")
 		self.modelNClasses: int = int(os.getenv("HSSFLDON_MODEL_N_CLASSES", 9))
 		self.huggingFaceAccessToken: str | None = os.getenv("HSSFLDON_HF_ACCESS_TOKEN", None)
+		self.confidenceThreshold: float = float(os.getenv("HSSFLDON_CLIENT_CONFIDENCE_THRESHOLD", 0.75))
 
 		# Create static paths for model components
 		self.modelPath_base: str = os.path.join(self.modelDirectory, f"model_base")
@@ -375,7 +376,7 @@ class HSSFLDON_ModelManager:
 
 				# Calculate probabilities and predictions
 				probabilities = torch.sigmoid(logits)
-				predictions = (probabilities > 0.5)
+				predictions = (probabilities > self.confidenceThreshold)
 
 				# Track batch stats
 				batchStats_total = labels.numel()
@@ -439,7 +440,7 @@ class HSSFLDON_ModelManager:
 
 				# Calculate probabilities and predictions
 				probabilities = torch.sigmoid(logits)
-				predictions = (probabilities > 0.5)
+				predictions = (probabilities > self.confidenceThreshold)
 
 				# Track validation stats
 				total = labels.numel()
@@ -498,7 +499,7 @@ class HSSFLDON_ModelManager:
 		result[HSSFLDON_PredictionOutputType.LOGIT_PREDICTION] = logits.cpu()
 		result[HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION] = embeddings.cpu()
 		result[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION] = torch.sigmoid(logits).cpu()
-		result[HSSFLDON_PredictionOutputType.BINARY_PREDICTION] = (torch.sigmoid(logits) > 0.5).long().cpu()
+		result[HSSFLDON_PredictionOutputType.BINARY_PREDICTION] = (torch.sigmoid(logits) > self.confidenceThreshold).long().cpu()
 		return result, labels
 	
 	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 128, max_length: int = 256, shuffle: bool = True):
