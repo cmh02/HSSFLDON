@@ -149,10 +149,10 @@ class HSSFLDON_ServerApplication:
 		self.learningIterations: int = int(os.getenv("HSSFLDON_LEARNING_ITERATIONS", 10))
 		self.doLearningLoop()
 
-		# # Close API and shutdown everything (for now)
-		# self.closeApi()
+		# Close API and shutdown everything (for now)
+		self.closeApi()
 
-	def doLearningLoop(self):
+	def doLearningLoop(self) -> bool:
 		"""
 		Main loop for the server application to perform learning iterations.
 		"""
@@ -295,6 +295,10 @@ class HSSFLDON_ServerApplication:
 		with open(evaluationHistoryPath, "w") as f:
 			json.dump(self.modelEvaluationHistory, f)
 		self.logger.info(f"Saved model evaluation history to {evaluationHistoryPath} after completing all learning iterations!")
+
+		# Return to idle state after learning loop is complete
+		self.enterState(HSSFLDON_ServerState.IDLE)
+		return True
 
 	def launchApi(self) -> bool:
 		"""
