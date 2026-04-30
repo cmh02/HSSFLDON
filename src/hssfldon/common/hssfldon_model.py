@@ -13,6 +13,7 @@ from typing import Tuple, Any, Dict
 from dotenv import load_dotenv
 from huggingface_hub import login
 from torch.utils.data import DataLoader, Dataset
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, hamming_loss
 from transformers import AutoModel, AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup
 
 # Project Imports
@@ -400,19 +401,24 @@ class HSSFLDON_ModelManager:
 		self.logger.info(f"Training completed for {epochs} epochs!")
 		return epochHistory
 
-	def evaluate(self, dataLoader: DataLoader) -> tuple[float, float]:
+	def evaluate(self, dataLoader: DataLoader) -> dict[str, float]:
 		"""
 		Evaluate model on given data loader.
+
+		Parameters:
+		- dataLoader (DataLoader): The DataLoader containing the evaluation data.
+
+		Returns:
+		- dict: A dictionary containing loss, accuracy, recall, precision, and F1 score.
 		"""
 		self.logger.debug(f"Starting model evaluation!")
 
 		# Set model into training mode and prepare trackers
 		self.model.eval()
 		valStats_loss = 0.0
-		valStats_lossAverage = 0.0
-		valStats_accuracy = 0.0
-		valStats_correct = 0
 		valStats_total = 0
+		allLabels = []
+		allPredictions = []
 
 		# Iterate over validation data
 		lossFunction = torch.nn.BCEWithLogitsLoss()
@@ -430,17 +436,30 @@ class HSSFLDON_ModelManager:
 				# Track validation stats
 				total = labels.numel()
 				loss = loss.item() * total
-				correct = (predictions == labels).sum().item()
 				valStats_total += total
 				valStats_loss += loss
-				valStats_correct += correct
 
-		# Calculate average loss and accuracy
+				# Append to list
+				allPredictions.extend(predictions.cpu().view(-1).tolist())
+				allLabels.extend(labels.cpu().view(-1).tolist())
+
+		# Calculate metrics with sklearn
 		valStats_lossAverage = valStats_loss / max(1, valStats_total)
-		valStats_accuracy = valStats_correct / max(1, valStats_total)
+		valStats_accuracy = accuracy_score(allLabels, allPredictions)
+		valStats_hammingLoss = hamming_loss(allLabels, allPredictions)
+		valStats_precision, valStats_recall, valStats_f1, _ = precision_recall_fscore_support(allLabels, allPredictions, average='weighted', zero_division=0)
+
+		# Log and return
 		self.logger.info(f"Model evaluation completed! Validation Loss: {valStats_lossAverage:.4f}, Validation Accuracy: {valStats_accuracy:.4f}")
-		return valStats_lossAverage, valStats_accuracy
-	
+		return {
+			"loss": valStats_lossAverage,
+			"accuracy": valStats_accuracy,
+			"hamming_loss": valStats_hammingLoss,
+			"precision": valStats_precision,
+			"recall": valStats_recall,
+			"f1_score": valStats_f1
+		}
+
 	def predict(self, dataLoader: DataLoader) -> Tuple[Dict[HSSFLDON_PredictionOutputType, torch.Tensor], torch.Tensor]:
 		
 		# Holder for all logits
