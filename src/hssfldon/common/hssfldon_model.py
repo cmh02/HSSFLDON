@@ -409,7 +409,15 @@ class HSSFLDON_ModelManager:
 		- dataLoader (DataLoader): The DataLoader containing the evaluation data.
 
 		Returns:
-		- dict: A dictionary containing loss, accuracy, recall, precision, and F1 score.
+		- dict: A dictionary containing metrics:
+			{
+				"loss": float,  		# Average loss over the evaluation dataset
+				"accuracy": float,  	# Accuracy over the evaluation dataset
+				"hamming_loss": float,  # Hamming loss over the evaluation dataset
+				"precision": float,  	# Precision over the evaluation dataset
+				"recall": float,  		# Recall over the evaluation dataset
+				"f1_score": float  		# F1 score over the evaluation dataset
+			}
 		"""
 		self.logger.debug(f"Starting model evaluation!")
 
