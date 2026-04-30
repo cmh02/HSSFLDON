@@ -103,6 +103,20 @@ class HSSFLDON_ServerApplication:
 				"epochs": self.learningRounds,
 			},
 		)
+		self.wandbRun.define_metric(step_metric = "round", name = "passive/accuracy")
+		self.wandbRun.define_metric(step_metric = "round", name = "passive/loss")
+		self.wandbRun.define_metric(step_metric = "round", name = "passive/hamming_loss")
+		self.wandbRun.define_metric(step_metric = "round", name = "passive/precision")
+		self.wandbRun.define_metric(step_metric = "round", name = "passive/recall")
+		self.wandbRun.define_metric(step_metric = "round", name = "passive/f1_score")
+		self.wandbRun.define_metric(step_metric = "round", name = "active/accuracy")
+		self.wandbRun.define_metric(step_metric = "round", name = "active/loss")
+		self.wandbRun.define_metric(step_metric = "round", name = "active/hamming_loss")
+		self.wandbRun.define_metric(step_metric = "round", name = "active/precision")
+		self.wandbRun.define_metric(step_metric = "round", name = "active/recall")
+		self.wandbRun.define_metric(step_metric = "round", name = "active/f1_score")
+		self.wandbRun.define_metric(step_metric = "round", name = "active/NumConfident")
+		self.wandbRun.define_metric(step_metric = "round", name = "active/NumUnconfident")
 
 		# Setup API
 		self.api_host = os.getenv("HSSFLDON_SERVER_HOST", "127.0.0.1")
@@ -183,6 +197,7 @@ class HSSFLDON_ServerApplication:
 		}
 		self.wandbRun.log(
 			data={
+				"round": 0,
 				"passive/loss": testResults.get("loss", 0.0),
 				"passive/accuracy": testResults.get("accuracy", 0.0),
 				"passive/hamming_loss": testResults.get("hamming_loss", 0.0),
@@ -194,6 +209,7 @@ class HSSFLDON_ServerApplication:
 		)
 		self.wandbRun.log(
 			data={
+				"round": 0,
 				"active/accuracy": testResults.get("accuracy", 0.0),
 				"active/loss": testResults.get("loss", 0.0),
 				"active/hamming_loss": testResults.get("hamming_loss", 0.0),
@@ -289,6 +305,7 @@ class HSSFLDON_ServerApplication:
 			# Log evaluation metrics to wandb
 			self.wandbRun.log(
 				data={
+					"round": learningRound,
 					"passive/accuracy": testResults.get("accuracy", 0.0),
 					"passive/loss": testResults.get("loss", 0.0),
 					"passive/hamming_loss": testResults.get("hamming_loss", 0.0),
@@ -319,7 +336,8 @@ class HSSFLDON_ServerApplication:
 				dataloader=activeDataloader,
 				confidenceThreshold = float(os.getenv("HSSFLDON_ACTIVE_LEARNING_CONFIDENCE", 0.5)),
 				numFinalists=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_FINALISTS", 10)),
-				numCentroids=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_CENTROIDS", 5))
+				numCentroids=int(os.getenv("HSSFLDON_ACTIVE_LEARNING_NUM_CENTROIDS", 5)),
+				round=learningRound
 			)
 			self.logger.info(f"Selected finalist datapoints for active learning for round {learningRound}/{self.learningRounds}!")
 
@@ -393,6 +411,7 @@ class HSSFLDON_ServerApplication:
 			# Log evaluation metrics to wandb
 			self.wandbRun.log(
 				data={
+					"round": learningRound,
 					"active/accuracy": testResults.get("accuracy", 0.0),
 					"active/loss": testResults.get("loss", 0.0),
 					"active/hamming_loss": testResults.get("hamming_loss", 0.0),
@@ -498,7 +517,7 @@ class HSSFLDON_ServerApplication:
 		# Load the averaged state dict into the global model
 		return avgStateDict
 	
-	def _getFinalistDatapointsForActiveLearning(self, modelManager: HSSFLDON_ModelManager, dataloader: DataLoader, confidenceThreshold: float, numFinalists: int, numCentroids: int) -> DataLoader:
+	def _getFinalistDatapointsForActiveLearning(self, modelManager: HSSFLDON_ModelManager, dataloader: DataLoader, confidenceThreshold: float, numFinalists: int, numCentroids: int, round: int) -> DataLoader:
 		"""
 		Get the finalist datapoints to send to clients for active learning based on confidence threshold.
 
@@ -520,7 +539,13 @@ class HSSFLDON_ServerApplication:
 
 		# Log sizes of confident and unconfident datapoints
 		self.logger.debug(f"Number of confident datapoints: {len(confidentDatapoints)}, Number of unconfident datapoints: {len(unconfidentDatapoints)}")
-		self.wandbRun.log({"active/NumConfident": len(confidentDatapoints), "active/NumUnconfident": len(unconfidentDatapoints)})
+		self.wandbRun.log(
+			data={
+				"active/NumConfident": len(confidentDatapoints), 
+				"active/NumUnconfident": len(unconfidentDatapoints)
+			}, 
+			step=round
+		)
 
 		# If we don't have any unconfident datapoints, just return empty dataloader
 		if len(unconfidentDatapoints) == 0:
