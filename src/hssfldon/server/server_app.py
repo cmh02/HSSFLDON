@@ -159,22 +159,22 @@ class HSSFLDON_ServerApplication:
 		os.makedirs(self.evaluationResultsDirectory, exist_ok=True)
 
 		# Alert when started
-        self.wandbRun.alert(
-            title="HSSFLDON Server - Training Started",
-            text=f"The HSSFLDON Server has started training!",
-            level=AlertLevel.INFO
-        )
+		self.wandbRun.alert(
+			title="HSSFLDON Server - Training Started",
+			text=f"The HSSFLDON Server has started training!",
+			level=AlertLevel.INFO
+		)
 
 		# Begin server loop for configured iterations
 		self.learningIterations: int = int(os.getenv("HSSFLDON_LEARNING_ITERATIONS", 10))
 		self.doLearningLoop()
 
 		# Alert when finished
-        self.wandbRun.alert(
-            title="HSSFLDON Server - Training Complete",
-            text=f"The HSSFLDON Server has completed training!",
-            level=AlertLevel.INFO
-        )
+		self.wandbRun.alert(
+			title="HSSFLDON Server - Training Complete",
+			text=f"The HSSFLDON Server has completed training!",
+			level=AlertLevel.INFO
+		)
 
 		# Finish wandb run
 		self.wandbRun.finish()
