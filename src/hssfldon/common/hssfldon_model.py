@@ -63,6 +63,7 @@ class HSSFLDON_ModelManager:
 		self.modelNClasses: int = int(os.getenv("HSSFLDON_MODEL_N_CLASSES", 9))
 		self.huggingFaceAccessToken: str | None = os.getenv("HSSFLDON_HF_ACCESS_TOKEN", None)
 		self.confidenceThreshold: float = float(os.getenv("HSSFLDON_CLIENT_CONFIDENCE_THRESHOLD", 0.75))
+		self.fedProxMu: float = float(os.getenv("HSSFLDON_MODEL_FEDPROX_MU", 0.01))
 
 		# Build class position weights based on distribution
 		# self.classPositionWeights = [
