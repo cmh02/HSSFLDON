@@ -65,6 +65,7 @@ class HSSFLDON_ServerApplication:
 		# Initialize global learning rate
 		self.globalPassiveLearningRate: float = float(os.getenv("HSSFLDON_FL_LR_PASSIVE", 2e-4))
 		self.globalActiveLearningRate: float = float(os.getenv("HSSFLDON_FL_LR_ACTIVE", 1e-5))
+		self.globalLearningRateMinimum: float = float(os.getenv("HSSFLDON_FL_LR_MINIMUM", 1e-6))
 		self.learningRateDecayRate: float = float(os.getenv("HSSFLDON_FL_LR_DECAY_RATE", 0.97))
 
 		# Initialize model evaluation tracking {learning_iteration: {passive_or_active: {metric_name: metric_value}}}}
@@ -270,6 +271,8 @@ class HSSFLDON_ServerApplication:
 			# Calculate learning rates for this round
 			self.globalPassiveLearningRate = self.globalPassiveLearningRate * (self.learningRateDecayRate ** iteration)
 			self.globalActiveLearningRate = self.globalActiveLearningRate * (self.learningRateDecayRate ** iteration)
+			self.globalPassiveLearningRate = max(self.globalPassiveLearningRate, self.globalLearningRateMinimum)
+			self.globalActiveLearningRate = max(self.globalActiveLearningRate, self.globalLearningRateMinimum)
 
 			# Passive Learning: Tell clients to perform passive learning
 			self.enterState(HSSFLDON_ServerState.PASSIVE_LEARNING)
