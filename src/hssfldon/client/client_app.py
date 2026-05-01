@@ -163,8 +163,8 @@ class HSSFLDON_ClientApplication:
 		self.logger.info(f"Starting active learning process!")
 
 		# Get datapoint from server for active learning
-		text = self.getActiveLearningDatapoint()
-		if text is None:
+		datapoint = self.getActiveLearningDatapoint()
+		if datapoint is None:
 			self.logger.error(f"Failed to get active learning datapoint from server. Aborting this round of active learning!")
 			return
 		
@@ -173,18 +173,8 @@ class HSSFLDON_ClientApplication:
 
 		# Tokenize datapoint and prepare dataloader
 		dataloader: torch.utils.data.DataLoader = modelManager.tokenize_and_create_dataloader(
-			texts = [text],
-			labels = None
-		)
-
-		# Predict labels
-		output, _ = modelManager.predict(dataloader)
-		predictedLabel = output[HSSFLDON_PredictionOutputType.BINARY_PREDICTION][0]
-
-		# Prepare final dataloader with predicted label and embedding for training
-		dataloader: torch.utils.data.DataLoader = modelManager.tokenize_and_create_dataloader(
-			texts = [text],
-			labels = [predictedLabel]
+			texts = datapoint.get("text", ""),
+			labels = datapoint.get("labels", [])
 		)
 
 		# Train model on datapoint
@@ -316,7 +306,7 @@ class HSSFLDON_ClientApplication:
 		except Exception as e:
 			self.logger.error(f"An exception occurred while submitting update to server: {e}")
 
-	def getActiveLearningDatapoint(self):
+	def getActiveLearningDatapoint(self) -> dict | None:
 		"""
 		Get the active learning datapoint from the server.
 		"""
@@ -326,8 +316,12 @@ class HSSFLDON_ClientApplication:
 			response.raise_for_status()
 			data: dict = response.json()
 			datapoint: str = data.get("datapoint")
+			labels: list = data.get("labels")
 			self.logger.info(f"Received active learning datapoint from server: {datapoint}")
-			return datapoint
+			return {
+				"text": datapoint,
+				"labels": labels
+			}
 		except Exception as e:
 			self.logger.error(f"An exception occurred while fetching active learning datapoint: {e}")
 		return None
