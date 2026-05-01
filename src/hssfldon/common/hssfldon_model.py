@@ -345,8 +345,8 @@ class HSSFLDON_ModelManager:
 		# Cache parameter pairs for FedProx regularization if needed
 		fedprox_pairs = []
 		if (self.fedProxMu > 0) and (globalStateDict is not None):
-			self.logger.debug(f"Caching FedProx weight pairs to memory! There are {len(self.model.named_parameters())} parameters in the model to check!")
-			for name, param in self.model.named_parameters():
+			self.logger.debug(f"Caching FedProx weight pairs to memory! There are {len(self.component_head.named_parameters())} parameters in the classification head to check!")
+			for name, param in self.component_head.named_parameters():
 				if param.requires_grad:
 					global_weight = globalStateDict[name].to(param.device).detach()
 					fedprox_pairs.append((param, global_weight))
