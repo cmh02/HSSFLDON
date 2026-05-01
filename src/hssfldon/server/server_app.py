@@ -63,7 +63,7 @@ class HSSFLDON_ServerApplication:
 		self.clientLearningRateCache: dict[int, float] = {}
 
 		# Initialize global learning rate
-		self.globalPassiveLearningRate: float = float(os.getenv("HSSFLDON_FL_LR_PASSIVE", 2e-4))
+		self.globalPassiveLearningRate: float = float(os.getenv("HSSFLDON_FL_LR_PASSIVE", 1e-4))
 		self.globalActiveLearningRate: float = float(os.getenv("HSSFLDON_FL_LR_ACTIVE", 1e-5))
 		self.globalLearningRateMinimum: float = float(os.getenv("HSSFLDON_FL_LR_MINIMUM", 1e-6))
 		self.learningRateDecayRate: float = float(os.getenv("HSSFLDON_FL_LR_DECAY_RATE", 0.97))
