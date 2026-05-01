@@ -321,7 +321,7 @@ class HSSFLDON_ServerApplication:
 			self.logger.info(f"Preparing for active learning for round {learningRound}/{self.learningRounds}!")
 			allUnlabeledCandidatesDataloader = modelManager.tokenize_and_create_dataloader(
 				texts = self.unlabeledDataset["text"],
-				labels=None
+				labels = self.unlabeledDataset["labels"]
 			)
 			output, _ = modelManager.predict(
 				dataLoader=allUnlabeledCandidatesDataloader
