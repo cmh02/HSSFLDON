@@ -166,6 +166,7 @@ class GetActiveDatapointsResponse(BaseModel):
     status: str = Field(..., description="Status of the request")
     message: str = Field(..., description="Additional information about the request result")
     datapoint: str | None = Field(None, description="A text to be labeled by the client")
+    labels: list | None = Field(None, description="Labels for the active datapoint")
 
 @HSSFLDON_ServerAPIRouter.get("/active_datapoint", response_model=GetActiveDatapointsResponse, status_code=status.HTTP_200_OK, tags=["Client Management"])
 async def getActiveDatapoint(request: Request, payload: GetActiveDatapointsRequest = Depends()):
@@ -181,6 +182,16 @@ async def getActiveDatapoint(request: Request, payload: GetActiveDatapointsReque
     datapoint = server_app.clientActiveLearningDatapointCache.get(payload.client_id, None)
 
     if datapoint is not None:
-        return GetActiveDatapointsResponse(status="ok", message=f"Active datapoint for client {payload.client_id} fetched successfully!", datapoint=datapoint)
+        return GetActiveDatapointsResponse(
+            status="ok",
+            message=f"Active datapoint for client {payload.client_id} fetched successfully!", 
+            datapoint=datapoint,
+            labels=datapoint.get("labels")
+        )
     else:
-        return GetActiveDatapointsResponse(status="ok", message=f"No active datapoints available for client {payload.client_id} at this time.", datapoint=None)
+        return GetActiveDatapointsResponse(
+            status="ok", 
+            message=f"No active datapoints available for client {payload.client_id} at this time.", 
+            datapoint=None, 
+            labels=None
+        )

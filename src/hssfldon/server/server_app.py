@@ -351,7 +351,10 @@ class HSSFLDON_ServerApplication:
 				maxCategoryIndex = torch.argmax(datapoint["probabilities"]).item()
 				oracleId = self.oracleToCategoryMapping.get(maxCategoryIndex)
 				if self.clientActiveLearningDatapointCache.get(oracleId) is None:
-					self.clientActiveLearningDatapointCache[oracleId] = datapoint["text"]
+					self.clientActiveLearningDatapointCache[oracleId] = {
+						"text": datapoint["text"],
+						"labels": datapoint["labels"],
+					}
 					self.logger.info(f"Assigned active learning datapoint to client {oracleId} based on oracle mapping for category index {maxCategoryIndex}!")
 				else:
 					self.logger.info(f"Client {oracleId} already has an active learning datapoint assigned, skipping additional datapoint assignment for category index {maxCategoryIndex}!")
