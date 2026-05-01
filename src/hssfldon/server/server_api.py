@@ -166,3 +166,35 @@ async def getActiveDatapoint(request: Request, payload: GetActiveDatapointsReque
             datapoint=None, 
             labels=None
         )
+    
+class getLearningRateRequest(BaseModel):
+    """
+    Request model for fetching the current learning rate for a client.
+    """
+    client_id: int = Field(..., gte=0, description="Unique identifier for the client") # type: ignore
+
+class getLearningRateResponse(BaseModel):
+    """
+    Response model for fetching the current learning rate for a client.
+    """
+    status: str = Field(..., description="Status of the request")
+    message: str = Field(..., description="Additional information about the request result")
+    learning_rate: float | None = Field(None, description="The current learning rate for the client")
+
+@HSSFLDON_ServerAPIRouter.get("/learning_rate", response_model=getLearningRateResponse, status_code=status.HTTP_200_OK, tags=["Client Management"])
+async def getLearningRate(request: Request, payload: getLearningRateRequest = Depends()):
+    """
+    API Endpoint: /learning_rate
+    Method: GET
+    Description: Fetch the current learning rate for a client.
+    """
+    # Access the server application instance
+    server_app: "HSSFLDON_ServerApplication" = request.app.state.server_app
+
+    # Get learning rate for client
+    learning_rate = server_app.clientLearningRateCache.get(payload.client_id, None)
+
+    if learning_rate is not None:
+        return getLearningRateResponse(status="ok", message=f"Learning rate for client {payload.client_id} fetched successfully: `{learning_rate}`!", learning_rate=learning_rate)
+    else:
+        return getLearningRateResponse(status="ok", message=f"No learning rate available for client {payload.client_id} at this time.", learning_rate=None)
