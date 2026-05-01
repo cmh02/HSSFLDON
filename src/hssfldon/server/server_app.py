@@ -348,7 +348,8 @@ class HSSFLDON_ServerApplication:
 				labels = self.unlabeledDataset["labels"]
 			)
 			output, _ = modelManager.predict(
-				dataLoader=allUnlabeledCandidatesDataloader
+				dataLoader=allUnlabeledCandidatesDataloader,
+				doTemperatureScaling=True
 			)
 			self.logger.info(f"Calculated probabilities for unlabeled dataset for round {learningRound}/{self.learningRounds}!")
 			activeDataSet = allUnlabeledCandidatesDataloader.dataset
