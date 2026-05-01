@@ -9,6 +9,7 @@ import os
 import copy
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 from typing import Tuple, Any, Dict
 from dotenv import load_dotenv
 from huggingface_hub import login
@@ -341,6 +342,15 @@ class HSSFLDON_ModelManager:
 		optimizer = self.buildOptimizer(learningRate=learningRate, weightDecay=weightDecay)
 		scheduler = self.buildScheduler(optimizer, numWarmupSteps=schedulerWarmupSteps, numTrainingSteps=epochs * len(dataLoader))
 
+		# Cache parameter pairs for FedProx regularization if needed
+		fedprox_pairs = []
+		if (self.fedProxMu > 0) and (globalStateDict is not None):
+			self.logger.debug("Caching FedProx weight pairs to memory!")
+			for name, param in tqdm(iterable=self.model.named_parameters(), desc="Checking Trainable Weights for FedProx Caching", total=len(list(self.model.named_parameters()))):
+				if param.requires_grad:
+					global_weight = globalStateDict[name].to(param.device).detach()
+					fedprox_pairs.append((param, global_weight))
+
 		# Training loop
 		epochHistory = {}
 		for epoch in range(1, epochs + 1):
@@ -382,12 +392,8 @@ class HSSFLDON_ModelManager:
 				# Add FedProx regularization term
 				if (self.fedProxMu > 0) and (globalStateDict is not None):
 					proximel = 0.0
-					for name, param in self.model.named_parameters():
-						if param.requires_grad:
-							global_weight = globalStateDict[name].to(param.device)
-							proximel += torch.square(torch.linalg.norm(param - global_weight))
-					
-					# Add the penalty to the standard BCE loss
+					for local_param, global_anchor in fedprox_pairs:
+						proximel += torch.square(torch.linalg.norm(local_param - global_anchor))
 					loss = loss + (self.fedProxMu / 2.0) * proximel
 
 				# Backward pass
