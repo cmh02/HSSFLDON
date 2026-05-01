@@ -65,6 +65,7 @@ class HSSFLDON_ModelManager:
 		self.huggingFaceAccessToken: str | None = os.getenv("HSSFLDON_HF_ACCESS_TOKEN", None)
 		self.confidenceThreshold: float = float(os.getenv("HSSFLDON_CLIENT_CONFIDENCE_THRESHOLD", 0.75))
 		self.fedProxMu: float = float(os.getenv("HSSFLDON_MODEL_FEDPROX_MU", 0.05))
+		self.temperature: float = float(os.getenv("HSSFLDON_MODEL_TEMPERATURE", 2.0))
 
 		# Create static paths for model components
 		self.modelPath_base: str = os.path.join(self.modelDirectory, f"model_base")
@@ -504,7 +505,7 @@ class HSSFLDON_ModelManager:
 			"f1_score": valStats_f1
 		}
 
-	def predict(self, dataLoader: DataLoader) -> Tuple[Dict[HSSFLDON_PredictionOutputType, torch.Tensor], torch.Tensor]:
+	def predict(self, dataLoader: DataLoader, doTemperatureScaling: bool=False) -> Tuple[Dict[HSSFLDON_PredictionOutputType, torch.Tensor], torch.Tensor]:
 		
 		# Holder for all logits
 		logitsList = []
@@ -529,12 +530,17 @@ class HSSFLDON_ModelManager:
 		labels = torch.cat(labelsList, dim=0) if len(labelsList) > 0 else torch.empty((0, self.modelNClasses))
 		embeddings = torch.cat(embeddingsList, dim=0) if len(embeddingsList) > 0 else torch.empty((0, self.component_base.config.hidden_size))
 
+		# Apply temperature scaling if needed
+		if doTemperatureScaling:
+			self.logger.debug(f"Applying temperature scaling to logits with temperature {self.temperature}!")
+			scaledLogits = logits / self.temperature
+
 		# Process output type
 		result = {}
 		result[HSSFLDON_PredictionOutputType.LOGIT_PREDICTION] = logits.cpu()
 		result[HSSFLDON_PredictionOutputType.EMBEDDING_PREDICTION] = embeddings.cpu()
-		result[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION] = torch.sigmoid(logits).cpu()
-		result[HSSFLDON_PredictionOutputType.BINARY_PREDICTION] = (torch.sigmoid(logits) > self.confidenceThreshold).long().cpu()
+		result[HSSFLDON_PredictionOutputType.PROBABILITY_PREDICTION] = torch.sigmoid(scaledLogits).cpu() if doTemperatureScaling else torch.sigmoid(logits).cpu()
+		result[HSSFLDON_PredictionOutputType.BINARY_PREDICTION] = (torch.sigmoid(scaledLogits) > self.confidenceThreshold).long().cpu() if doTemperatureScaling else (torch.sigmoid(logits) > self.confidenceThreshold).long().cpu()
 		return result, labels
 	
 	def tokenize_and_create_dataloader(self, texts, labels, batch_size: int = 128, max_length: int = 256, shuffle: bool = True):
