@@ -186,7 +186,7 @@ async def getActiveDatapoint(request: Request, payload: GetActiveDatapointsReque
             status="ok",
             message=f"Active datapoint for client {payload.client_id} fetched successfully!", 
             datapoint=datapoint.get("text"),
-            labels=datapoint.get("labels")
+            labels=datapoint.get("labels").tolist() if datapoint.get("labels") is not None else None
         )
     else:
         return GetActiveDatapointsResponse(
