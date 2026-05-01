@@ -104,10 +104,15 @@ class HSSFLDON_ServerApplication:
 			project=os.getenv("HSSFLDON_WANDB_PROJECT", "hssfldon"),
 			# Track hyperparameters and run metadata.
 			config={
-				"learning_rate": self.globalPassiveLearningRate,
 				"architecture": "FL debBERTa",
 				"dataset": "ucberkeley-dlab/measuring-hate-speech",
-				"epochs": self.learningRounds,
+				"rounds": self.learningRounds,
+				"batch_size": self.batchSize,
+				"learning_rate_passive": self.globalPassiveLearningRate,
+				"learning_rate_active": self.globalActiveLearningRate,
+				"learning_rate_decay_rate": self.learningRateDecayRate,
+				"fedprox_mu": os.getenv("HSSFLDON_MODEL_FEDPROX_MU", 0.01),
+				"temperature": os.getenv("HSSFLDON_MODEL_TEMPERATURE", 2.0)
 			},
 		)
 		self.wandbRun.define_metric(step_metric = "round", name = "passive/accuracy")
