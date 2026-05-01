@@ -65,13 +65,6 @@ class HSSFLDON_ModelManager:
 		self.confidenceThreshold: float = float(os.getenv("HSSFLDON_CLIENT_CONFIDENCE_THRESHOLD", 0.75))
 		self.fedProxMu: float = float(os.getenv("HSSFLDON_MODEL_FEDPROX_MU", 0.01))
 
-		# Build class position weights based on distribution
-		# self.classPositionWeights = [
-		# 	float(os.getenv(f"HSSFLDON_CLASS_POSWEIGHT_{i}", 1.0)) for i in range(self.modelNClasses)
-		# ]
-		# self.classPositionWeights = torch.tensor(self.classPositionWeights, device=self.device)
-		# self.classPositionWeights = torch.clamp(self.classPositionWeights, min=1.0, max=5.0)
-
 		# Create static paths for model components
 		self.modelPath_base: str = os.path.join(self.modelDirectory, f"model_base")
 		self.modelPath_head: str = os.path.join(self.modelDirectory, f"model_head")
