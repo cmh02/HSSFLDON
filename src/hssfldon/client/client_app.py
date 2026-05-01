@@ -115,6 +115,10 @@ class HSSFLDON_ClientApplication:
 		"""
 		self.logger.info(f"Starting passive learning process!")
 
+		# Get learning rate from server
+		learningRate = self.getAssignedLearningRate()
+		self.logger.info(f"Using assigned learning rate from server: {learningRate}")
+
 		# Create new model manager (model) for this round based on global head
 		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
 		self.globalStateDict = copy.deepcopy(modelManager.getStateDict())
@@ -136,7 +140,7 @@ class HSSFLDON_ClientApplication:
 			dataLoader = dataloader,
 			globalStateDict = self.globalStateDict,
 			epochs = int(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_EPOCHS", 1)),
-			learningRate = float(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_LR", 1e-4)),
+			learningRate = learningRate,
 			weightDecay = float(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_WEIGHT_DECAY", 0.01)),
 			maxGradientNorm = float(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_MAX_GRAD_NORM", 1.0)),
 			schedulerWarmupSteps = int(os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_SCHEDULER_WARMUP_STEPS", 0))
@@ -168,6 +172,10 @@ class HSSFLDON_ClientApplication:
 			self.logger.error(f"Failed to get active learning datapoint from server. Aborting this round of active learning!")
 			return
 		
+		# Get learning rate from server
+		learningRate = self.getAssignedLearningRate()
+		self.logger.info(f"Using assigned learning rate from server: {learningRate}")
+
 		# Create model manager based on client model from passive learning
 		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"client_{self.client_id}")
 
@@ -182,7 +190,7 @@ class HSSFLDON_ClientApplication:
 			dataLoader=dataloader,
 			globalStateDict=self.globalStateDict,
 			epochs=int(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_EPOCHS", 3)),
-			learningRate=float(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_LR", 1e-5)),
+			learningRate=learningRate,
 			weightDecay=float(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_WEIGHT_DECAY", 0.01)),
 			maxGradientNorm=float(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_MAX_GRAD_NORM", 1.0)),
 			schedulerWarmupSteps=int(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_SCHEDULER_WARMUP_STEPS", 0))
@@ -325,3 +333,19 @@ class HSSFLDON_ClientApplication:
 		except Exception as e:
 			self.logger.error(f"An exception occurred while fetching active learning datapoint: {e}")
 		return None
+	
+	def getAssignedLearningRate(self) -> float:
+		"""
+		Get the assigned learning rate for this client from the server.
+		"""
+		self.logger.debug(f"Making request to fetch assigned learning rate!")
+		try:
+			response: requests.Response = requests.get(f"{self.server_api_url}/learning_rate?client_id={self.client_id}")
+			response.raise_for_status()
+			data: dict = response.json()
+			learning_rate: float = data.get("learning_rate", 1e-5)
+			self.logger.info(f"Received assigned learning rate from server: {learning_rate}")
+			return learning_rate
+		except Exception as e:
+			self.logger.error(f"An exception occurred while fetching assigned learning rate: {e}")
+		return 1e-5
