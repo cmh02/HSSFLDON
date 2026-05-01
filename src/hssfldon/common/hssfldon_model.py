@@ -345,11 +345,12 @@ class HSSFLDON_ModelManager:
 		# Cache parameter pairs for FedProx regularization if needed
 		fedprox_pairs = []
 		if (self.fedProxMu > 0) and (globalStateDict is not None):
-			self.logger.debug("Caching FedProx weight pairs to memory!")
-			for name, param in tqdm(iterable=self.model.named_parameters(), desc="Checking Trainable Weights for FedProx Caching", total=len(list(self.model.named_parameters()))):
+			self.logger.debug(f"Caching FedProx weight pairs to memory! There are {len(self.model.named_parameters())} parameters in the model to check!")
+			for name, param in self.model.named_parameters():
 				if param.requires_grad:
 					global_weight = globalStateDict[name].to(param.device).detach()
 					fedprox_pairs.append((param, global_weight))
+		self.logger.debug(f"Cached {len(fedprox_pairs)} parameter pairs for FedProx regularization during training!")
 
 		# Training loop
 		epochHistory = {}
