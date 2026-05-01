@@ -60,6 +60,12 @@ class HSSFLDON_ServerApplication:
 		self.clientUpdateStatus: dict[int, bool] = {}
 		self.clientHeadPathCache: dict[int, str | None] = {}
 		self.clientActiveLearningDatapointCache: dict[int, dict] = {}
+		self.clientLearningRateCache: dict[int, float] = {}
+
+		# Initialize global learning rate
+		self.globalPassiveLearningRate: float = float(os.getenv("HSSFLDON_FL_LR_PASSIVE", 2e-4))
+		self.globalActiveLearningRate: float = float(os.getenv("HSSFLDON_FL_LR_ACTIVE", 1e-5))
+		self.learningRateDecayRate: float = float(os.getenv("HSSFLDON_FL_LR_DECAY_RATE", 0.97))
 
 		# Initialize model evaluation tracking {learning_iteration: {passive_or_active: {metric_name: metric_value}}}}
 		self.evaluationResultsDirectory: str = os.getenv("HSSFLDON_EVALUATION_RESULTS_DIRECTORY", "results")
@@ -97,7 +103,7 @@ class HSSFLDON_ServerApplication:
 			project=os.getenv("HSSFLDON_WANDB_PROJECT", "hssfldon"),
 			# Track hyperparameters and run metadata.
 			config={
-				"learning_rate": os.getenv("HSSFLDON_CLIENT_PASSIVE_LEARNING_RATE", 1e-4),
+				"learning_rate": self.globalPassiveLearningRate,
 				"architecture": "FL debBERTa",
 				"dataset": "ucberkeley-dlab/measuring-hate-speech",
 				"epochs": self.learningRounds,
@@ -109,6 +115,7 @@ class HSSFLDON_ServerApplication:
 		self.wandbRun.define_metric(step_metric = "round", name = "passive/precision")
 		self.wandbRun.define_metric(step_metric = "round", name = "passive/recall")
 		self.wandbRun.define_metric(step_metric = "round", name = "passive/f1_score")
+		self.wandbRun.define_metric(step_metric = "round", name = "passive/learning_rate")
 		self.wandbRun.define_metric(step_metric = "round", name = "active/accuracy")
 		self.wandbRun.define_metric(step_metric = "round", name = "active/loss")
 		self.wandbRun.define_metric(step_metric = "round", name = "active/hamming_loss")
@@ -117,6 +124,7 @@ class HSSFLDON_ServerApplication:
 		self.wandbRun.define_metric(step_metric = "round", name = "active/f1_score")
 		self.wandbRun.define_metric(step_metric = "round", name = "active/NumConfident")
 		self.wandbRun.define_metric(step_metric = "round", name = "active/NumUnconfident")
+		self.wandbRun.define_metric(step_metric = "round", name = "active/learning_rate")
 
 		# Setup API
 		self.api_host = os.getenv("HSSFLDON_SERVER_HOST", "127.0.0.1")
@@ -203,7 +211,8 @@ class HSSFLDON_ServerApplication:
 				"passive/hamming_loss": testResults.get("hamming_loss", 0.0),
 				"passive/precision": testResults.get("precision", 0.0),
 				"passive/recall": testResults.get("recall", 0.0),
-				"passive/f1_score": testResults.get("f1_score", 0.0)
+				"passive/f1_score": testResults.get("f1_score", 0.0),
+				"passive/learning_rate": self.globalPassiveLearningRate
 			},
 			step=0
 		)
@@ -215,7 +224,8 @@ class HSSFLDON_ServerApplication:
 				"active/hamming_loss": testResults.get("hamming_loss", 0.0),
 				"active/precision": testResults.get("precision", 0.0),
 				"active/recall": testResults.get("recall", 0.0),
-				"active/f1_score": testResults.get("f1_score", 0.0)
+				"active/f1_score": testResults.get("f1_score", 0.0),
+				"active/learning_rate": self.globalActiveLearningRate
 			},
 			step=0
 		)
@@ -257,10 +267,17 @@ class HSSFLDON_ServerApplication:
 			modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
 			self.modelEvaluationHistory[iteration+1] = {}
 
+			# Calculate learning rates for this round
+			self.globalPassiveLearningRate = self.globalPassiveLearningRate * (self.learningRateDecayRate ** iteration)
+			self.globalActiveLearningRate = self.globalActiveLearningRate * (self.learningRateDecayRate ** iteration)
+
 			# Passive Learning: Tell clients to perform passive learning
 			self.enterState(HSSFLDON_ServerState.PASSIVE_LEARNING)
 			self.logger.info(f"Performing passive learning for round {learningRound}/{self.learningRounds}!")
 			for clientId in self.clients:
+
+				# Cache learning rate for client
+				self.clientLearningRateCache[clientId] = self.globalPassiveLearningRate
 
 				# Assign passive learning task to client
 				self.clientTasks[clientId] = HSSFLDON_ClientTask.DO_PASSIVE_LEARNING
@@ -274,6 +291,9 @@ class HSSFLDON_ServerApplication:
 				# Tell client to standby until next iteration
 				self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
 				self.logger.debug(f"Received update from client {clientId} and set to standby!")
+
+				# Clear client learning rate cache for next iteration
+				self.clientLearningRateCache[clientId] = None
 
 			# Passive Aggregation: Aggregate client updates into global model for passive learning
 			self.enterState(HSSFLDON_ServerState.AGGREGATING)
@@ -311,7 +331,8 @@ class HSSFLDON_ServerApplication:
 					"passive/hamming_loss": testResults.get("hamming_loss", 0.0),
 					"passive/precision": testResults.get("precision", 0.0),
 					"passive/recall": testResults.get("recall", 0.0),
-					"passive/f1_score": testResults.get("f1_score", 0.0)
+					"passive/f1_score": testResults.get("f1_score", 0.0),
+					"passive/learning_rate": self.globalPassiveLearningRate
 				},
 				step=(iteration+1)
 			)
@@ -367,6 +388,9 @@ class HSSFLDON_ServerApplication:
 					self.logger.info(f"No active learning datapoint assigned to client {clientId} for round {learningRound}/{self.learningRounds}, skipping active learning task assignment for this client!")
 					continue
 
+				# Cache learning rate for client
+				self.clientLearningRateCache[clientId] = self.globalActiveLearningRate
+
 				# Assign active learning task to client
 				self.clientTasks[clientId] = HSSFLDON_ClientTask.DO_ACTIVE_LEARNING
 				self.clientUpdateStatus[clientId] = False
@@ -379,6 +403,9 @@ class HSSFLDON_ServerApplication:
 				# Tell client to standby until next iteration
 				self.clientTasks[clientId] = HSSFLDON_ClientTask.STANDBY
 				self.logger.debug(f"Received update from client {clientId} and set to standby!")
+
+				# Clear client learning rate cache for next iteration
+				self.clientLearningRateCache[clientId] = None
 
 			# Clear active learning datapoint cache for next iteration
 			for clientId in self.clientActiveLearningDatapointCache.keys():
@@ -420,9 +447,10 @@ class HSSFLDON_ServerApplication:
 					"active/hamming_loss": testResults.get("hamming_loss", 0.0),
 					"active/precision": testResults.get("precision", 0.0),
 					"active/recall": testResults.get("recall", 0.0),
-					"active/f1_score": testResults.get("f1_score", 0.0)
+					"active/f1_score": testResults.get("f1_score", 0.0),
+					"active/learning_rate": self.globalActiveLearningRate
 				},
-				step=(iteration+1)
+				step=learningRound
 			)
 		
 		# Save model evaluation history to file after all iterations are complete
