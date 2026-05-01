@@ -184,7 +184,7 @@ class HSSFLDON_ClientApplication:
 		# Train model on datapoint
 		epochTrainingHistory = modelManager.train(
 			dataLoader=dataloader,
-			epochs=int(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_EPOCHS", 100)),
+			epochs=int(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_EPOCHS", 3)),
 			learningRate=float(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_LR", 2e-5)),
 			weightDecay=float(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_WEIGHT_DECAY", 0.01)),
 			maxGradientNorm=float(os.getenv("HSSFLDON_CLIENT_ACTIVE_LEARNING_MAX_GRAD_NORM", 1.0)),
