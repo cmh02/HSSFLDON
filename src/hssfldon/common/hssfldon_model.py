@@ -328,9 +328,18 @@ class HSSFLDON_ModelManager:
 		# Return logits and labels
 		return logits, labels, embeddings
 
-	def train(self, dataLoader: DataLoader, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0, schedulerWarmupSteps: int = 0):
+	def train(self, dataLoader: DataLoader, globalStateDict: dict, epochs: int = 1, learningRate: float = 1e-4, weightDecay: float = 0.00, maxGradientNorm: float = 1.0, schedulerWarmupSteps: int = 0):
 		"""
 		Train the model on the given data loader.
+
+		Parameters:
+		- dataLoader (DataLoader): The DataLoader containing the training data.
+		- globalStateDict (dict): The global state dict to load into the model before training.
+		- epochs (int): The number of epochs to train for.
+		- learningRate (float): The learning rate for the optimizer.
+		- weightDecay (float): The weight decay for the optimizer.
+		- maxGradientNorm (float): The maximum gradient norm for gradient clipping.
+		- schedulerWarmupSteps (int): The number of warmup steps for the learning rate scheduler.
 		"""
 		self.logger.info(f"Starting training for {epochs} epochs with learning rate {learningRate} and weight decay {weightDecay}!")
 
