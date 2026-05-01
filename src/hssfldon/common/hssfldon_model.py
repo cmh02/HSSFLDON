@@ -376,8 +376,19 @@ class HSSFLDON_ModelManager:
 				if torch.isnan(logits).any():
 					self.logger.error(f"WEIGHT CORRUPTION: Logits are NaN at batch {i}. The weights exploded during the previous backward pass!")
 
-				# Calculate loss
+				# Calculate standard loss
 				loss = lossFunction(logits, labels)
+
+				# Add FedProx regularization term
+				if (self.fedProxMu > 0) and (globalStateDict is not None):
+					proximel = 0.0
+					for name, param in self.model.named_parameters():
+						if param.requires_grad:
+							global_weight = globalStateDict[name].to(param.device)
+							proximel += torch.square(torch.linalg.norm(param - global_weight))
+					
+					# Add the penalty to the standard BCE loss
+					loss = loss + (self.fedProxMu / 2.0) * proximel
 
 				# Backward pass
 				optimizer.zero_grad()
