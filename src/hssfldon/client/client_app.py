@@ -173,8 +173,8 @@ class HSSFLDON_ClientApplication:
 
 		# Tokenize datapoint and prepare dataloader
 		dataloader: torch.utils.data.DataLoader = modelManager.tokenize_and_create_dataloader(
-			texts = datapoint.get("text", ""),
-			labels = datapoint.get("labels", [])
+			texts = [datapoint.get("text", "")],
+			labels = [datapoint.get("labels", [])]
 		)
 
 		# Train model on datapoint
