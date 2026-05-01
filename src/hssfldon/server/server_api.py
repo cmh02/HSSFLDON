@@ -124,35 +124,6 @@ async def submitClientUpdate(request: Request, payload: SubmitUpdateRequest):
 
     return SubmitUpdateResponse(status="ok", message=f"Client {payload.client_id} update submitted successfully!")
 
-class SubmitEvaluationRequest(BaseModel):
-    """
-    Request model for submitting a client evaluation.
-    """
-    client_id: int = Field(..., gte=0, description="Unique identifier for the client") # type: ignore
-    evaluation_results: dict = Field(..., description="Evaluation results from the client")
-
-class SubmitEvaluationResponse(BaseModel):
-    """
-    Response model for submitting a client evaluation.
-    """
-    status: str = Field(..., description="Status of the submission request")
-    message: str = Field(..., description="Additional information about the submission result")
-
-@HSSFLDON_ServerAPIRouter.post("/submit_evaluation", response_model=SubmitEvaluationResponse, status_code=status.HTTP_200_OK, tags=["Client Management"])
-async def submitClientEvaluation(request: Request, payload: SubmitEvaluationRequest):
-    """
-    API Endpoint: /submit_evaluation
-    Method: POST
-    Description: Submit a client evaluation to the server.
-    """
-    # Access the server application instance
-    server_app: "HSSFLDON_ServerApplication" = request.app.state.server_app
-
-    # Process evaluation results (for now, just log them) TODO: implement
-    server_app.logger.info(f"Received evaluation results from client {payload.client_id}: {payload.evaluation_results}")
-
-    return SubmitEvaluationResponse(status="ok", message=f"Client {payload.client_id} evaluation submitted successfully!")
-
 class GetActiveDatapointsRequest(BaseModel):
     """
     Request model for fetching active datapoints for a client.
