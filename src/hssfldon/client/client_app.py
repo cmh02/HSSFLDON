@@ -317,7 +317,7 @@ class HSSFLDON_ClientApplication:
 			data: dict = response.json()
 			datapoint: str = data.get("datapoint")
 			labels: list = data.get("labels")
-			self.logger.info(f"Received active learning datapoint from server: {datapoint}")
+			self.logger.info(f"Received active learning datapoint from server: {datapoint} | {labels}")
 			return {
 				"text": datapoint,
 				"labels": labels
