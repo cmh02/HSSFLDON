@@ -268,6 +268,12 @@ class HSSFLDON_ModelManager:
 		except Exception as e:
 			self.logger.error(f"Failed to save classification head to {modelFile_head}: {e}")
 
+	def getStateDict(self) -> dict:
+		"""
+		Get the state dict of the model (only the classification head, since the base is frozen).
+		"""
+		return self.component_head.state_dict()
+
 	def getTrainableParameters(self):
 		"""
 		Get the trainable parameters of the model (i.e. the classification head).

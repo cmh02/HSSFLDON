@@ -13,6 +13,7 @@
 # Library Imports
 import os
 import gc
+import copy
 import time
 import torch
 import requests
@@ -43,6 +44,9 @@ class HSSFLDON_ClientApplication:
 
 		# Make static reference for head identifier
 		self.headIdentifier: str =  f"classification_head_client_{self.client_id}"
+
+		# Reference to global state dict which will be updated each passive learning phase
+		self.globalStateDict: dict = {}
 
 		# Get data directory from env and make path for client
 		self.dataDirectory: str = os.getenv("HSSFLDON_CLIENT_DATA_DIRECTORY", "data")
@@ -113,6 +117,7 @@ class HSSFLDON_ClientApplication:
 
 		# Create new model manager (model) for this round based on global head
 		modelManager: HSSFLDON_ModelManager = HSSFLDON_ModelManager(customHeadIdentifier=f"global")
+		self.globalStateDict = copy.deepcopy(modelManager.getStateDict())
 
 		# Get dataset for this client
 		dataset: Dataset | None = HSSFLDON_DataLoader().loadDataset(path=self.dataPath, split="train")
