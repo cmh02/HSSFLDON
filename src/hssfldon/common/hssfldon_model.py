@@ -160,7 +160,7 @@ class HSSFLDON_ModelManager:
 		os.makedirs(self.modelPath_tokenizer, exist_ok=True)
 
 		# Check if the tokenizer has been saved locally
-		if os.path.exists(modelFile_tokenizer):
+		if os.path.isfile(modelFile_tokenizer):
 			self.logger.info(f"Loading tokenizer from local path: {modelFile_tokenizer}")
 			tokenizer = AutoTokenizer.from_pretrained(modelFile_tokenizer)
 		else:
@@ -215,7 +215,7 @@ class HSSFLDON_ModelManager:
 		)
 
 		# Check if saved locally, and if so, load state dict
-		if os.path.exists(modelFile_head):
+		if os.path.isfile(modelFile_head):
 			self.logger.info(f"Loading classification head from local path: {modelFile_head}")
 			try:
 				head.load_state_dict(torch.load(modelFile_head, map_location=self.device))
