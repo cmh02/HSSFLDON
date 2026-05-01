@@ -355,6 +355,7 @@ class HSSFLDON_ModelManager:
 		# Training loop
 		epochHistory = {}
 		for epoch in range(1, epochs + 1):
+			self.logger.debug(f"Starting epoch {epoch}/{epochs}!")
 
 			# Set model into training mode and prepare trackers
 			self.model.train()
