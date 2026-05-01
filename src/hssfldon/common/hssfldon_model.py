@@ -344,6 +344,7 @@ class HSSFLDON_ModelManager:
 
 		# Cache parameter pairs for FedProx regularization if needed
 		fedprox_pairs = []
+		self.logger.debug(f"Checking if we need to do FedProx caching! FedProx Mu: {self.fedProxMu}, Global State Dict Provided: {globalStateDict is not None}!")
 		if (self.fedProxMu > 0) and (globalStateDict is not None):
 			self.logger.debug(f"Caching FedProx weight pairs to memory! There are {len(self.component_head.named_parameters())} parameters in the classification head to check!")
 			for name, param in self.component_head.named_parameters():
